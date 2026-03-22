@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import { parseProjectMentionHref } from "@paperclipai/shared";
 import { cn } from "../lib/utils";
 import { useTheme } from "../context/ThemeContext";
+import { Link } from "@/lib/router";
 
 interface MarkdownBodyProps {
   children: string;
@@ -138,8 +139,16 @@ export function MarkdownBody({ children, className, resolveImageSrc }: MarkdownB
           </a>
         );
       }
+      // Use SPA navigation for internal links (paths starting with /)
+      if (href && href.startsWith("/")) {
+        return (
+          <Link to={href}>
+            {linkChildren}
+          </Link>
+        );
+      }
       return (
-        <a href={href} rel="noreferrer">
+        <a href={href} target="_blank" rel="noreferrer">
           {linkChildren}
         </a>
       );

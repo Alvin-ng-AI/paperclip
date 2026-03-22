@@ -18,7 +18,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Check, ChevronDown, ChevronRight, Copy, Download, FileText, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Copy, Download, Expand, FileText, MoreHorizontal, Plus, Trash2, X } from "lucide-react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 type DraftState = {
   key: string;
@@ -107,6 +113,7 @@ export function IssueDocumentsSection({
   const [autosaveDocumentKey, setAutosaveDocumentKey] = useState<string | null>(null);
   const [copiedDocumentKey, setCopiedDocumentKey] = useState<string | null>(null);
   const [highlightDocumentKey, setHighlightDocumentKey] = useState<string | null>(null);
+  const [fullscreenDocumentKey, setFullscreenDocumentKey] = useState<string | null>(null);
   const autosaveDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copiedDocumentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasScrolledToHashRef = useRef(false);
@@ -647,16 +654,22 @@ export function IssueDocumentsSection({
                     <span className="rounded-full border border-border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
                       {doc.key}
                     </span>
-                    <a
-                      href={`#document-${encodeURIComponent(doc.key)}`}
-                      className="text-[11px] text-muted-foreground transition-colors hover:text-foreground hover:underline"
-                    >
+                    <span className="text-[11px] text-muted-foreground">
                       rev {doc.latestRevisionNumber} • updated {relativeTime(doc.updatedAt)}
-                    </a>
+                    </span>
                   </div>
                   {showTitle && <p className="mt-2 text-sm font-medium">{doc.title}</p>}
                 </div>
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                    title="Open full screen"
+                    onClick={() => setFullscreenDocumentKey(doc.key)}
+                  >
+                    <Expand className="h-3.5 w-3.5" />
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon-xs"
@@ -884,6 +897,35 @@ export function IssueDocumentsSection({
           );
         })}
       </div>
+
+      {/* Full-screen document viewer */}
+      {(() => {
+        const fsDoc = fullscreenDocumentKey ? sortedDocuments.find((d) => d.key === fullscreenDocumentKey) : null;
+        return (
+          <Sheet open={fullscreenDocumentKey !== null} onOpenChange={(open) => { if (!open) setFullscreenDocumentKey(null); }}>
+            <SheetContent side="right" className="sm:max-w-2xl overflow-y-auto">
+              {fsDoc && (
+                <>
+                  <SheetHeader>
+                    <SheetTitle className="flex items-center gap-2 font-mono text-sm">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      {fsDoc.title?.trim() && !titlesMatchKey(fsDoc.title, fsDoc.key)
+                        ? fsDoc.title
+                        : fsDoc.key}
+                    </SheetTitle>
+                    <p className="text-xs text-muted-foreground">
+                      rev {fsDoc.latestRevisionNumber} • updated {relativeTime(fsDoc.updatedAt)}
+                    </p>
+                  </SheetHeader>
+                  <div className="px-4 pb-4">
+                    {renderBody(fsDoc.body, "text-[15px] leading-7")}
+                  </div>
+                </>
+              )}
+            </SheetContent>
+          </Sheet>
+        );
+      })()}
     </div>
   );
 }
