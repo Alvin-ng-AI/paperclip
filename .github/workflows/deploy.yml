@@ -1,13 +1,15 @@
-name: Deploy CLAWD OS
+name: CLAWD OS CI
 
 on:
   push:
     branches: [master]
+  pull_request:
+    branches: [master]
   workflow_dispatch:
 
 jobs:
-  deploy:
-    name: Deploy to VPS
+  build:
+    name: Build & Verify
     runs-on: ubuntu-latest
 
     steps:
@@ -28,7 +30,8 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Deploy to VPS via SSH
+      - name: Sync code to VPS
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -41,6 +44,4 @@ jobs:
             export PATH="$PATH:/home/claudeuser/.local/share/pnpm"
             pnpm install --frozen-lockfile
             pnpm build
-            PM2_HOME=/home/claudeuser/.pm2 pm2 restart clawd-os || PM2_HOME=/home/claudeuser/.pm2 pm2 start "node server/dist/index.js" --name clawd-os
-            PM2_HOME=/home/claudeuser/.pm2 pm2 save
-            echo "Deployed successfully"
+            echo "Code synced to VPS — ready for CLAWD OS deployment"
