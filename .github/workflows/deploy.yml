@@ -25,7 +25,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --yes
 
       - name: Build
         run: pnpm build
@@ -39,9 +39,10 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             set -e
+            git config --global --add safe.directory /home/claudeuser/clawd/paperclip
             cd /home/claudeuser/clawd/paperclip
             git pull origin master
-            export PATH="$PATH:/home/claudeuser/.local/share/pnpm"
-            pnpm install --frozen-lockfile
+            export PATH="$PATH:/usr/bin:/usr/local/bin"
+            pnpm install --frozen-lockfile --yes
             pnpm build
             echo "Code synced to VPS — ready for CLAWD OS deployment"
