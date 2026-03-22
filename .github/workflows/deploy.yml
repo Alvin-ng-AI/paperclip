@@ -43,6 +43,6 @@ jobs:
             cd /home/claudeuser/clawd/paperclip
             git pull origin master
             export PATH="$PATH:/usr/bin:/usr/local/bin"
-            pnpm install --frozen-lockfile --yes
+            pnpm install --frozen-lockfile
             pnpm build
             echo "Code synced to VPS — ready for CLAWD OS deployment"
