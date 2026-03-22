@@ -22,18 +22,19 @@ import { PriorityIcon } from "./PriorityIcon";
 import { Identity } from "./Identity";
 import type { Issue } from "@paperclipai/shared";
 
-const boardStatuses = [
-  "backlog",
-  "todo",
-  "in_progress",
-  "in_review",
-  "blocked",
-  "done",
-  "cancelled",
+const BOARD_COLUMNS: { status: string; label: string }[] = [
+  { status: "todo", label: "To Do" },
+  { status: "in_progress", label: "In Progress" },
+  { status: "in_review", label: "Pending Review" },
+  { status: "blocked", label: "Blocked" },
+  { status: "done", label: "Done" },
 ];
 
+const boardStatuses = BOARD_COLUMNS.map((col) => col.status);
+
 function statusLabel(status: string): string {
-  return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return BOARD_COLUMNS.find((col) => col.status === status)?.label
+    ?? status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 interface Agent {
