@@ -7,6 +7,10 @@ on:
     branches: [master]
   workflow_dispatch:
 
+concurrency:
+  group: vps-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build & Verify
@@ -37,12 +41,14 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 15m
           script: |
             set -e
             git config --global --add safe.directory /home/claudeuser/clawd/paperclip
             cd /home/claudeuser/clawd/paperclip
             git pull origin master
             export PATH="$PATH:/usr/bin:/usr/local/bin"
+            export CI=true
             pnpm install --frozen-lockfile
             pnpm build
             echo "Code synced to VPS — ready for CLAWD OS deployment"
