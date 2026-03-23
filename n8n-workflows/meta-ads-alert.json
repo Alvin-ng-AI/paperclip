@@ -1,0 +1,158 @@
+{
+  "name": "CLAWD OS \u2014 Meta Ads Performance Alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 4
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule (Every 4h)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://graph.facebook.com/v19.0/act_{{ $env.META_AD_ACCOUNT_ID }}/insights?fields=campaign_name,spend,impressions,clicks,ctr,actions&time_range={\"since\":\"{{ $now.minus({days:1}).toFormat('yyyy-MM-dd') }}\",\"until\":\"{{ $now.toFormat('yyyy-MM-dd') }}\"}&access_token={{ $env.META_ACCESS_TOKEN }}",
+        "options": {}
+      },
+      "id": "fetch-meta-ads",
+      "name": "Fetch Meta Ads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const campaigns = $input.first().json.data || [];\nconst alerts = [];\n\nfor (const c of campaigns) {\n  const ctr = parseFloat(c.ctr || 0);\n  const spend = parseFloat(c.spend || 0);\n  \n  if (ctr < 2.0 && spend > 10) {\n    alerts.push({\n      campaign: c.campaign_name,\n      ctr: ctr.toFixed(2) + '%',\n      spend: 'RM ' + spend.toFixed(2),\n      alert: 'CTR below 2% \u2014 CMO review needed'\n    });\n  }\n}\n\nreturn [{ json: { alerts, total_campaigns: campaigns.length, has_alerts: alerts.length > 0 } }];"
+      },
+      "id": "check-performance",
+      "name": "Check Performance",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "has-alerts",
+              "leftValue": "={{ $json.has_alerts }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-alerts",
+      "name": "Has Alerts?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:18795/notify",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "=\u26a0\ufe0f *Meta Ads Alert*\\n\\n{{ $json.alerts.map(a => `\u2022 ${a.campaign}: ${a.ctr} CTR (${a.spend} spent) \u2014 ${a.alert}`).join('\\n') }}\\n\\nCMO agent has been flagged."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-telegram",
+      "name": "Notify Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule (Every 4h)": {
+      "main": [
+        [
+          {
+            "node": "Fetch Meta Ads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Meta Ads": {
+      "main": [
+        [
+          {
+            "node": "Check Performance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Performance": {
+      "main": [
+        [
+          {
+            "node": "Has Alerts?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Alerts?": {
+      "main": [
+        [
+          {
+            "node": "Notify Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "notes": "Requires env vars: META_ACCESS_TOKEN, META_AD_ACCOUNT_ID. Activate after setting credentials.",
+  "id": "d572e6ff-8935-436c-8e19-086879c12e8a"
+}
