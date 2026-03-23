@@ -1,0 +1,127 @@
+{
+  "name": "CLAWD OS \u2014 Shopify Daily Sales Feed (Awoofi)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule (8am Daily)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://{{ $env.SHOPIFY_STORE_DOMAIN }}/admin/api/2024-01/orders.json?status=any&created_at_min={{ $now.minus({days:1}).startOf('day').toISO() }}&created_at_max={{ $now.startOf('day').toISO() }}&limit=250",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "={{ $env.SHOPIFY_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fetch-orders",
+      "name": "Fetch Yesterday Orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const orders = $input.first().json.orders || [];\nconst totalRevenue = orders.reduce((sum, o) => sum + parseFloat(o.total_price || 0), 0);\nconst totalOrders = orders.length;\nconst avgOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders).toFixed(2) : 0;\n\nconst topProducts = {};\nfor (const order of orders) {\n  for (const item of (order.line_items || [])) {\n    topProducts[item.title] = (topProducts[item.title] || 0) + item.quantity;\n  }\n}\nconst top3 = Object.entries(topProducts)\n  .sort((a,b) => b[1]-a[1])\n  .slice(0,3)\n  .map(([name,qty]) => `${name} (${qty}x)`);\n\nconst yesterday = new Date();\nyesterday.setDate(yesterday.getDate()-1);\nconst dateStr = yesterday.toLocaleDateString('en-MY', {day:'numeric',month:'short'});\n\nreturn [{ json: { date: dateStr, total_orders: totalOrders, total_revenue: 'RM ' + totalRevenue.toFixed(2), avg_order_value: 'RM ' + avgOrderValue, top_products: top3 } }];"
+      },
+      "id": "summarize",
+      "name": "Summarize Sales",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:18795/notify",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "=\ud83d\udce6 *Awoofi Daily Sales \u2014 {{ $json.date }}*\\n\\n\u2022 Orders: {{ $json.total_orders }}\\n\u2022 Revenue: {{ $json.total_revenue }}\\n\u2022 Avg Order: {{ $json.avg_order_value }}\\n\u2022 Top Products: {{ $json.top_products.join(', ') || 'N/A' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "notify-telegram",
+      "name": "Daily Digest to Telegram",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule (8am Daily)": {
+      "main": [
+        [
+          {
+            "node": "Fetch Yesterday Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Yesterday Orders": {
+      "main": [
+        [
+          {
+            "node": "Summarize Sales",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize Sales": {
+      "main": [
+        [
+          {
+            "node": "Daily Digest to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "notes": "Requires env vars: SHOPIFY_STORE_DOMAIN (e.g. awoofi.myshopify.com), SHOPIFY_ACCESS_TOKEN. Activate after setting credentials.",
+  "id": "6ff51fed-ab6a-4526-bb8e-4b8ea0d7c931"
+}
