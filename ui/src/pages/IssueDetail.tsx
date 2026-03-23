@@ -480,6 +480,9 @@ export function IssueDetail() {
     onSuccess: () => {
       invalidateIssue();
     },
+    onError: (err) => {
+      pushToast({ title: "Update failed", body: err instanceof Error ? err.message : "Could not update issue", tone: "error" });
+    },
   });
 
   const addComment = useMutation({
@@ -711,6 +714,17 @@ export function IssueDetail() {
             status={issue.status}
             onChange={(status) => updateIssue.mutate({ status })}
           />
+          {issue.status === "in_review" && (
+            <Button
+              size="sm"
+              className="h-6 px-2 text-xs bg-green-700 hover:bg-green-600 text-white"
+              disabled={updateIssue.isPending}
+              onClick={() => updateIssue.mutate({ status: "done" })}
+            >
+              <Check className="h-3 w-3 mr-1" />
+              Approve
+            </Button>
+          )}
           <PriorityIcon
             priority={issue.priority}
             onChange={(priority) => updateIssue.mutate({ priority })}

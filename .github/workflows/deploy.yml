@@ -52,4 +52,6 @@ jobs:
             export CI=true
             pnpm install --frozen-lockfile
             pnpm build
-            echo "Code synced to VPS — ready for CLAWD OS deployment"
+            rm -rf /usr/lib/node_modules/paperclipai/node_modules/@paperclipai/server/ui-dist
+            ln -s /home/claudeuser/clawd/paperclip/ui/dist /usr/lib/node_modules/paperclipai/node_modules/@paperclipai/server/ui-dist
+            echo "Code synced and UI deployed to production"
