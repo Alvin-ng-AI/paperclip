@@ -982,11 +982,12 @@ export function issueService(db: Db) {
 
       if (!current) throw notFound("Issue not found");
 
+      // Same agent can reclaim their own task when checkoutRunId is null, even if
+      // executionRunId is stale from a previous run (e.g. agent restarted mid-task).
       if (
         current.assigneeAgentId === agentId &&
         current.status === "in_progress" &&
         current.checkoutRunId == null &&
-        (current.executionRunId == null || current.executionRunId === checkoutRunId) &&
         checkoutRunId
       ) {
         const adopted = await db
@@ -1002,7 +1003,6 @@ export function issueService(db: Db) {
               eq(issues.status, "in_progress"),
               eq(issues.assigneeAgentId, agentId),
               isNull(issues.checkoutRunId),
-              or(isNull(issues.executionRunId), eq(issues.executionRunId, checkoutRunId)),
             ),
           )
           .returning()
@@ -1094,6 +1094,32 @@ export function issueService(db: Db) {
         }
       }
 
+      // Same agent can claim ownership when checkoutRunId is null (stale executionRunId).
+      // This allows comments and status updates after an agent restarts mid-task.
+      if (
+        actorRunId &&
+        current.status === "in_progress" &&
+        current.assigneeAgentId === actorAgentId &&
+        current.checkoutRunId == null
+      ) {
+        const adopted = await db
+          .update(issues)
+          .set({ checkoutRunId: actorRunId, executionRunId: actorRunId, updatedAt: new Date() })
+          .where(
+            and(
+              eq(issues.id, id),
+              eq(issues.status, "in_progress"),
+              eq(issues.assigneeAgentId, actorAgentId),
+              isNull(issues.checkoutRunId),
+            ),
+          )
+          .returning()
+          .then((rows) => rows[0] ?? null);
+        if (adopted) {
+          return { ...adopted, adoptedFromRunId: null as string | null };
+        }
+      }
+
       throw conflict("Issue run ownership conflict", {
         issueId: current.id,
         status: current.status,
@@ -1136,6 +1162,7 @@ export function issueService(db: Db) {
           status: "todo",
           assigneeAgentId: null,
           checkoutRunId: null,
+          executionRunId: null,
           updatedAt: new Date(),
         })
         .where(eq(issues.id, id))
