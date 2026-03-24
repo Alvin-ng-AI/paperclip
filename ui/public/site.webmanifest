@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Paperclip",
-  "short_name": "Paperclip",
-  "description": "AI-powered project management and agent coordination platform",
+  "name": "CLAWD OS",
+  "short_name": "CLAWD OS",
+  "description": "AI agency command centre — AlvinAI Agency",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
