@@ -16,7 +16,11 @@
     ".": "./dist/index.js",
     "./*": "./dist/*.js",
     "./server": "./dist/server/index.js",
-    "./server/*": "./dist/server/*.js"
+    "./server/*": "./dist/server/*.js",
+    "./ui": "./dist/ui/index.js",
+    "./ui/*": "./dist/ui/*.js",
+    "./cli": "./dist/cli/index.js",
+    "./cli/*": "./dist/cli/*.js"
   },
   "publishConfig": {
     "access": "public",
