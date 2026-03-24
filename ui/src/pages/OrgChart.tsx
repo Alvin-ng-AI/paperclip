@@ -193,16 +193,22 @@ export function OrgChart() {
   const hasInitialized = useRef(false);
   useEffect(() => {
     if (hasInitialized.current || allNodes.length === 0 || !containerRef.current) return;
-    hasInitialized.current = true;
 
     const container = containerRef.current;
     const containerW = container.clientWidth;
     const containerH = container.clientHeight;
 
+    // Guard against 0-dimension containers (e.g. mobile Safari where h-full resolves
+    // to 0 in a block-layout context). Without this, fitZoom becomes negative and
+    // cards render off-screen. Skip and let the next render retry.
+    if (containerW <= 0 || containerH <= 0) return;
+
+    hasInitialized.current = true;
+
     // Fit chart to container
     const scaleX = (containerW - 40) / bounds.width;
     const scaleY = (containerH - 40) / bounds.height;
-    const fitZoom = Math.min(scaleX, scaleY, 1);
+    const fitZoom = Math.min(Math.max(scaleX, 0.1), Math.max(scaleY, 0.1), 1);
 
     const chartW = bounds.width * fitZoom;
     const chartH = bounds.height * fitZoom;
@@ -286,7 +292,7 @@ export function OrgChart() {
     <div
       ref={containerRef}
       className="w-full flex-1 min-h-0 overflow-hidden relative bg-muted/20 border border-border rounded-lg"
-      style={{ cursor: dragging ? "grabbing" : "grab" }}
+      style={{ cursor: dragging ? "grabbing" : "grab", minHeight: "480px" }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
