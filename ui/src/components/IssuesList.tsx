@@ -608,6 +608,38 @@ export function IssuesList({
         </div>
       </div>
 
+      {/* Project quick-filter tab strip — only shown when multiple projects exist */}
+      {projects && projects.length > 1 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none -mx-0.5 px-0.5">
+          <button
+            className={`shrink-0 px-3 py-1 text-xs rounded-full border transition-colors whitespace-nowrap ${
+              viewState.projects.length === 0
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+            }`}
+            onClick={() => updateView({ projects: [] })}
+          >
+            All Projects
+          </button>
+          {projects.map((project) => {
+            const isActive = viewState.projects.length === 1 && viewState.projects[0] === project.id;
+            return (
+              <button
+                key={project.id}
+                className={`shrink-0 px-3 py-1 text-xs rounded-full border transition-colors whitespace-nowrap ${
+                  isActive
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
+                }`}
+                onClick={() => updateView({ projects: isActive ? [] : [project.id] })}
+              >
+                {project.name}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {isLoading && <PageSkeleton variant="issues-list" />}
       {error && <p className="text-sm text-destructive">{error.message}</p>}
 
