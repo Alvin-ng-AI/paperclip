@@ -13,6 +13,106 @@ import { AgentIcon } from "../components/AgentIconPicker";
 import { Download, Network, Upload } from "lucide-react";
 import { AGENT_ROLE_LABELS, type Agent } from "@paperclipai/shared";
 
+// ── Mobile tree view ─────────────────────────────────────────────────────────
+
+function MobileOrgTree({
+  nodes,
+  agentMap,
+  depth = 0,
+  navigate,
+}: {
+  nodes: OrgNode[];
+  agentMap: Map<string, Agent>;
+  depth?: number;
+  navigate: (path: string) => void;
+}) {
+  return (
+    <div>
+      {nodes.map((node, idx) => {
+        const agent = agentMap.get(node.id);
+        const dotColor = statusDotColor[node.status] ?? defaultDotColor;
+        const isLast = idx === nodes.length - 1;
+        return (
+          <div key={node.id}>
+            {/* Row */}
+            <div
+              className="flex items-center gap-2.5 py-2 px-3 rounded-lg active:bg-accent/30 cursor-pointer select-none"
+              style={{ paddingLeft: depth === 0 ? 12 : 12 + depth * 20 }}
+              onClick={() => navigate(agent ? agentUrl(agent) : `/agents/${node.id}`)}
+            >
+              {/* Connector line for non-root */}
+              {depth > 0 && (
+                <span
+                  className="absolute"
+                  style={{
+                    left: 12 + (depth - 1) * 20 + 8,
+                    top: 0,
+                    bottom: isLast ? "50%" : 0,
+                    width: 1,
+                    background: "var(--border)",
+                  }}
+                />
+              )}
+              {/* Icon + status dot */}
+              <div className="relative shrink-0">
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                  <AgentIcon icon={agent?.icon} className="h-4 w-4 text-foreground/70" />
+                </div>
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-background"
+                  style={{ backgroundColor: dotColor }}
+                />
+              </div>
+              {/* Name + role */}
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-sm font-semibold leading-tight truncate">{node.name}</span>
+                <span className="text-[11px] text-muted-foreground leading-tight truncate">
+                  {agent?.title ?? roleLabel(node.role)}
+                </span>
+              </div>
+              {/* Status badge */}
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+                style={{
+                  background:
+                    node.status === "running" ? "rgba(34,211,238,0.15)" :
+                    node.status === "active"  ? "rgba(74,222,128,0.15)" :
+                    node.status === "error"   ? "rgba(248,113,113,0.15)" :
+                    "rgba(163,163,163,0.1)",
+                  color: dotColor,
+                }}
+              >
+                {node.status}
+              </span>
+            </div>
+            {/* Children */}
+            {node.reports.length > 0 && (
+              <div className="relative">
+                <div
+                  className="absolute"
+                  style={{
+                    left: 12 + depth * 20 + 8,
+                    top: 0,
+                    bottom: 0,
+                    width: 1,
+                    background: "var(--border)",
+                  }}
+                />
+                <MobileOrgTree
+                  nodes={node.reports}
+                  agentMap={agentMap}
+                  depth={depth + 1}
+                  navigate={navigate}
+                />
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // Layout constants
 const CARD_W = 200;
 const CARD_H = 100;
@@ -144,6 +244,14 @@ export function OrgChart() {
   const { setBreadcrumbs } = useBreadcrumbs();
   const navigate = useNavigate();
 
+  // Mobile detection — swap to list view below md breakpoint
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+
   const { data: orgTree, isLoading } = useQuery({
     queryKey: queryKeys.org(selectedCompanyId!),
     queryFn: () => agentsApi.org(selectedCompanyId!),
@@ -273,6 +381,36 @@ export function OrgChart() {
     return <EmptyState icon={Network} message="No organizational hierarchy defined." />;
   }
 
+  // ── Mobile list view ──────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div className="flex flex-col">
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-sm font-semibold text-muted-foreground">
+            {allNodes.length} agent{allNodes.length !== 1 ? "s" : ""}
+          </span>
+          <button
+            className="text-xs font-medium px-2.5 py-1 rounded border border-border hover:bg-accent transition-colors"
+            onClick={() => setIsMobile(false)}
+          >
+            Canvas view →
+          </button>
+        </div>
+        <div className="rounded-lg border border-border overflow-hidden divide-y divide-border">
+          {(orgTree ?? []).map((root) => (
+            <MobileOrgTree
+              key={root.id}
+              nodes={[root]}
+              agentMap={agentMap}
+              depth={0}
+              navigate={navigate}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
     <div className="mb-2 flex items-center justify-start gap-2 shrink-0">
@@ -288,6 +426,14 @@ export function OrgChart() {
           Export company
         </Button>
       </Link>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setIsMobile(true)}
+        className="ml-auto md:hidden"
+      >
+        List view
+      </Button>
     </div>
     <div
       ref={containerRef}

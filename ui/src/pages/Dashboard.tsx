@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dashboardApi } from "../api/dashboard";
@@ -12,7 +12,7 @@ import { queryKeys } from "../lib/queryKeys";
 import { EmptyState } from "../components/EmptyState";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { timeAgo } from "../lib/timeAgo";
-import { LayoutDashboard, Bell, Plus, ChevronRight, Check } from "lucide-react";
+import { LayoutDashboard, Bell, Plus, ChevronRight, Check, X, MessageSquare, Ban } from "lucide-react";
 import type { Agent, Issue } from "@paperclipai/shared";
 import { AGENT_ROLE_LABELS } from "@paperclipai/shared";
 
@@ -48,6 +48,15 @@ function sortAgents(agents: Agent[]): Agent[] {
     .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
 }
 
+// ── Per-card action state ─────────────────────────────────────────────────────
+
+type CardMode = null | "reject" | "comment" | "cancel" | "resolve";
+
+interface CardState {
+  mode: CardMode;
+  text: string;
+}
+
 // ── KPI card data ────────────────────────────────────────────────────────────
 
 interface KpiCard {
@@ -67,6 +76,16 @@ export function Dashboard() {
   const { pushToast } = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Per-card expanded action state
+  const [cardStates, setCardStates] = useState<Record<string, CardState>>({});
+
+  const setCardMode = (issueId: string, mode: CardMode) =>
+    setCardStates((prev) => ({ ...prev, [issueId]: { mode, text: prev[issueId]?.text ?? "" } }));
+  const setCardText = (issueId: string, text: string) =>
+    setCardStates((prev) => ({ ...prev, [issueId]: { mode: prev[issueId]?.mode ?? null, text } }));
+  const clearCard = (issueId: string) =>
+    setCardStates((prev) => { const n = { ...prev }; delete n[issueId]; return n; });
 
   useEffect(() => {
     setBreadcrumbs([{ label: "Dashboard" }]);
@@ -90,22 +109,55 @@ export function Dashboard() {
     enabled: !!selectedCompanyId,
   });
 
+  const { data: blockedIssues } = useQuery({
+    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "blocked"],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { status: "blocked" }),
+    enabled: !!selectedCompanyId,
+  });
+
   const agentMap = useMemo(() => {
     const m = new Map<string, Agent>();
     for (const a of agents ?? []) m.set(a.id, a);
     return m;
   }, [agents]);
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId!) });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(selectedCompanyId!) });
+  };
+
   const approveMutation = useMutation({
     mutationFn: (issueId: string) => issuesApi.update(issueId, { status: "done" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId!) });
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard(selectedCompanyId!) });
-      pushToast({ title: "Approved", tone: "success" });
-    },
-    onError: () => {
-      pushToast({ title: "Approval failed", tone: "error" });
-    },
+    onSuccess: (_d, issueId) => { clearCard(issueId); invalidate(); pushToast({ title: "Approved ✓", tone: "success" }); },
+    onError: () => pushToast({ title: "Approval failed", tone: "error" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: ({ issueId, reason }: { issueId: string; reason: string }) =>
+      issuesApi.addComment(issueId, `❌ Rejected: ${reason}`, true /* reopen */),
+    onSuccess: (_d, { issueId }) => { clearCard(issueId); invalidate(); pushToast({ title: "Sent back to agent", tone: "success" }); },
+    onError: () => pushToast({ title: "Reject failed", tone: "error" }),
+  });
+
+  const commentMutation = useMutation({
+    mutationFn: ({ issueId, body }: { issueId: string; body: string }) =>
+      issuesApi.addComment(issueId, body),
+    onSuccess: (_d, { issueId }) => { clearCard(issueId); pushToast({ title: "Comment added", tone: "success" }); },
+    onError: () => pushToast({ title: "Comment failed", tone: "error" }),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (issueId: string) => issuesApi.update(issueId, { status: "cancelled" }),
+    onSuccess: (_d, issueId) => { clearCard(issueId); invalidate(); pushToast({ title: "Task cancelled", tone: "success" }); },
+    onError: () => pushToast({ title: "Cancel failed", tone: "error" }),
+  });
+
+  // Resolve a blocked task: add comment with the info needed, move back to in_progress
+  const resolveMutation = useMutation({
+    mutationFn: ({ issueId, body }: { issueId: string; body: string }) =>
+      issuesApi.addComment(issueId, `✅ Resolved by Alvin: ${body}`, true /* reopen */),
+    onSuccess: (_d, { issueId }) => { clearCard(issueId); invalidate(); pushToast({ title: "Unblocked — agent will resume", tone: "success" }); },
+    onError: () => pushToast({ title: "Failed to unblock", tone: "error" }),
   });
 
   // Guard: no company selected
@@ -312,6 +364,13 @@ export function Dashboard() {
             ? (AGENT_ROLE_LABELS[assignee.role] ?? assignee.role)
             : null;
           const issueId = issue.identifier ?? issue.id.slice(0, 8).toUpperCase();
+          const cs = cardStates[issue.id] ?? { mode: null, text: "" };
+          const anyPending =
+            approveMutation.isPending ||
+            rejectMutation.isPending ||
+            commentMutation.isPending ||
+            cancelMutation.isPending;
+
           return (
             <div
               key={issue.id}
@@ -358,36 +417,326 @@ export function Dashboard() {
                 {timeAgo(issue.updatedAt)}
               </p>
 
-              {/* Actions */}
-              <div className="flex gap-2 mt-2.5">
-                <button
-                  className="flex-1 flex items-center justify-center gap-1 text-xs font-semibold py-1.5 rounded-lg"
+              {/* ── Expanded: Reject input ── */}
+              {cs.mode === "reject" && (
+                <div className="mt-2">
+                  <textarea
+                    className="w-full rounded-lg p-2 text-xs resize-none"
+                    style={{
+                      background: "rgba(239,68,68,0.08)",
+                      border: "1px solid rgba(239,68,68,0.3)",
+                      color: "#fff",
+                      outline: "none",
+                    }}
+                    rows={2}
+                    placeholder="Why are you rejecting this?"
+                    value={cs.text}
+                    onChange={(e) => setCardText(issue.id, e.target.value)}
+                    autoFocus
+                  />
+                  <div className="flex gap-2 mt-1.5">
+                    <button
+                      className="flex-1 text-xs font-semibold py-1.5 rounded-lg"
+                      style={{
+                        background: "rgba(239,68,68,0.15)",
+                        border: "1px solid rgba(239,68,68,0.3)",
+                        color: "#EF4444",
+                      }}
+                      disabled={anyPending || !cs.text.trim()}
+                      onClick={() => rejectMutation.mutate({ issueId: issue.id, reason: cs.text })}
+                    >
+                      Send & Reject
+                    </button>
+                    <button
+                      className="px-3 text-xs rounded-lg"
+                      style={{ background: "rgba(255,255,255,0.05)", color: "#6B7280" }}
+                      onClick={() => clearCard(issue.id)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Expanded: Comment input ── */}
+              {cs.mode === "comment" && (
+                <div className="mt-2">
+                  <textarea
+                    className="w-full rounded-lg p-2 text-xs resize-none"
+                    style={{
+                      background: "rgba(99,102,241,0.08)",
+                      border: "1px solid rgba(99,102,241,0.3)",
+                      color: "#fff",
+                      outline: "none",
+                    }}
+                    rows={2}
+                    placeholder="Add a comment without changing status…"
+                    value={cs.text}
+                    onChange={(e) => setCardText(issue.id, e.target.value)}
+                    autoFocus
+                  />
+                  <div className="flex gap-2 mt-1.5">
+                    <button
+                      className="flex-1 text-xs font-semibold py-1.5 rounded-lg"
+                      style={{
+                        background: "rgba(99,102,241,0.15)",
+                        border: "1px solid rgba(99,102,241,0.3)",
+                        color: "#818CF8",
+                      }}
+                      disabled={anyPending || !cs.text.trim()}
+                      onClick={() => commentMutation.mutate({ issueId: issue.id, body: cs.text })}
+                    >
+                      Add Comment
+                    </button>
+                    <button
+                      className="px-3 text-xs rounded-lg"
+                      style={{ background: "rgba(255,255,255,0.05)", color: "#6B7280" }}
+                      onClick={() => clearCard(issue.id)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Expanded: Cancel confirmation ── */}
+              {cs.mode === "cancel" && (
+                <div
+                  className="mt-2 rounded-lg p-2.5"
                   style={{
-                    background: "rgba(34,197,94,0.15)",
-                    border: "1px solid rgba(34,197,94,0.3)",
-                    color: "#22C55E",
+                    background: "rgba(239,68,68,0.08)",
+                    border: "1px solid rgba(239,68,68,0.2)",
                   }}
-                  disabled={approveMutation.isPending}
-                  onClick={() => approveMutation.mutate(issue.id)}
                 >
-                  <Check className="h-3 w-3" />
-                  Approve
-                </button>
-                <button
-                  className="flex-1 text-xs font-semibold py-1.5 rounded-lg"
-                  style={{
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    color: "#9CA3AF",
-                  }}
-                  onClick={() => navigate(`/issues/${issue.identifier ?? issue.id}`)}
-                >
-                  View Details
-                </button>
-              </div>
+                  <p className="text-xs mb-2" style={{ color: "#FCA5A5" }}>
+                    Cancel this task? This cannot be undone.
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      className="flex-1 text-xs font-semibold py-1.5 rounded-lg"
+                      style={{
+                        background: "rgba(239,68,68,0.2)",
+                        border: "1px solid rgba(239,68,68,0.4)",
+                        color: "#EF4444",
+                      }}
+                      disabled={anyPending}
+                      onClick={() => cancelMutation.mutate(issue.id)}
+                    >
+                      Yes, cancel task
+                    </button>
+                    <button
+                      className="px-3 text-xs rounded-lg"
+                      style={{ background: "rgba(255,255,255,0.05)", color: "#6B7280" }}
+                      onClick={() => clearCard(issue.id)}
+                    >
+                      Back
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Actions row (always visible unless expanded) ── */}
+              {cs.mode === null && (
+                <div className="grid grid-cols-2 gap-1.5 mt-2.5">
+                  {/* Approve */}
+                  <button
+                    className="flex items-center justify-center gap-1 text-xs font-semibold py-1.5 rounded-lg"
+                    style={{
+                      background: "rgba(34,197,94,0.15)",
+                      border: "1px solid rgba(34,197,94,0.3)",
+                      color: "#22C55E",
+                    }}
+                    disabled={anyPending}
+                    onClick={() => approveMutation.mutate(issue.id)}
+                  >
+                    <Check className="h-3 w-3" />
+                    Approve
+                  </button>
+
+                  {/* Reject */}
+                  <button
+                    className="flex items-center justify-center gap-1 text-xs font-semibold py-1.5 rounded-lg"
+                    style={{
+                      background: "rgba(239,68,68,0.1)",
+                      border: "1px solid rgba(239,68,68,0.25)",
+                      color: "#EF4444",
+                    }}
+                    disabled={anyPending}
+                    onClick={() => setCardMode(issue.id, "reject")}
+                  >
+                    <X className="h-3 w-3" />
+                    Reject
+                  </button>
+
+                  {/* Comment */}
+                  <button
+                    className="flex items-center justify-center gap-1 text-xs font-semibold py-1.5 rounded-lg"
+                    style={{
+                      background: "rgba(99,102,241,0.1)",
+                      border: "1px solid rgba(99,102,241,0.2)",
+                      color: "#818CF8",
+                    }}
+                    disabled={anyPending}
+                    onClick={() => setCardMode(issue.id, "comment")}
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                    Comment
+                  </button>
+
+                  {/* View Details */}
+                  <button
+                    className="flex items-center justify-center gap-1 text-xs font-semibold py-1.5 rounded-lg"
+                    style={{
+                      background: "rgba(255,255,255,0.04)",
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      color: "#9CA3AF",
+                    }}
+                    onClick={() => navigate(`/issues/${issue.identifier ?? issue.id}`)}
+                  >
+                    View Details
+                  </button>
+
+                  {/* Cancel task — full width */}
+                  <button
+                    className="col-span-2 flex items-center justify-center gap-1 text-[11px] font-medium py-1 rounded-lg"
+                    style={{
+                      background: "rgba(239,68,68,0.05)",
+                      border: "1px solid rgba(239,68,68,0.12)",
+                      color: "#6B7280",
+                    }}
+                    disabled={anyPending}
+                    onClick={() => setCardMode(issue.id, "cancel")}
+                  >
+                    <Ban className="h-3 w-3" />
+                    Cancel task
+                  </button>
+                </div>
+              )}
             </div>
           );
         })
+      )}
+
+      {/* ── Blocked — Needs Your Input ─────────────────────────────── */}
+      {(blockedIssues?.length ?? 0) > 0 && (
+        <>
+          <div className="px-4 pt-4 pb-2">
+            <span
+              className="text-xs font-bold uppercase tracking-widest"
+              style={{ color: "#4B5563" }}
+            >
+              Blocked — Needs Your Input
+            </span>
+          </div>
+
+          {(blockedIssues ?? []).map((issue: Issue) => {
+            const assignee = issue.assigneeAgentId ? agentMap.get(issue.assigneeAgentId) : null;
+            const issueId = issue.identifier ?? issue.id.slice(0, 8).toUpperCase();
+            const cs = cardStates[issue.id] ?? { mode: null, text: "" };
+            return (
+              <div
+                key={issue.id}
+                className="mx-4 mb-2 rounded-xl p-3"
+                style={{
+                  background: "#0D1220",
+                  border: "1px solid rgba(239,68,68,0.2)",
+                }}
+              >
+                {/* Top row */}
+                <div className="flex items-center justify-between mb-1.5">
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444" }}
+                  >
+                    {issueId}
+                  </span>
+                  <span
+                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    style={{ background: "rgba(239,68,68,0.15)", color: "#EF4444" }}
+                  >
+                    BLOCKED
+                  </span>
+                </div>
+                {/* Title */}
+                <p className="text-[13px] font-semibold mb-1 line-clamp-2">{issue.title}</p>
+                {/* Agent + time */}
+                <p className="text-[11px]" style={{ color: "#6B7280" }}>
+                  {assignee ? <>👤 {assignee.name} · </> : null}
+                  {timeAgo(issue.updatedAt)}
+                </p>
+
+                {/* Resolve input */}
+                {cs.mode === "resolve" && (
+                  <div className="mt-2">
+                    <textarea
+                      className="w-full rounded-lg p-2 text-xs resize-none"
+                      style={{
+                        background: "rgba(34,197,94,0.06)",
+                        border: "1px solid rgba(34,197,94,0.3)",
+                        color: "#fff",
+                        outline: "none",
+                      }}
+                      rows={2}
+                      placeholder="Provide the info needed to unblock this…"
+                      value={cs.text}
+                      onChange={(e) => setCardText(issue.id, e.target.value)}
+                      autoFocus
+                    />
+                    <div className="flex gap-2 mt-1.5">
+                      <button
+                        className="flex-1 text-xs font-semibold py-1.5 rounded-lg"
+                        style={{
+                          background: "rgba(34,197,94,0.15)",
+                          border: "1px solid rgba(34,197,94,0.3)",
+                          color: "#22C55E",
+                        }}
+                        disabled={resolveMutation.isPending || !cs.text.trim()}
+                        onClick={() => resolveMutation.mutate({ issueId: issue.id, body: cs.text })}
+                      >
+                        Unblock
+                      </button>
+                      <button
+                        className="px-3 text-xs rounded-lg"
+                        style={{ background: "rgba(255,255,255,0.05)", color: "#6B7280" }}
+                        onClick={() => clearCard(issue.id)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                {cs.mode === null && (
+                  <div className="flex gap-2 mt-2.5">
+                    <button
+                      className="flex-1 text-xs font-semibold py-1.5 rounded-lg"
+                      style={{
+                        background: "rgba(34,197,94,0.12)",
+                        border: "1px solid rgba(34,197,94,0.3)",
+                        color: "#22C55E",
+                      }}
+                      onClick={() => setCardMode(issue.id, "resolve")}
+                    >
+                      → Resolve
+                    </button>
+                    <button
+                      className="flex-1 text-xs font-semibold py-1.5 rounded-lg"
+                      style={{
+                        background: "rgba(255,255,255,0.04)",
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        color: "#9CA3AF",
+                      }}
+                      onClick={() => navigate(`/issues/${issue.identifier ?? issue.id}`)}
+                    >
+                      View Details
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </>
       )}
 
       {/* Bottom padding so content clears the mobile bottom nav */}
