@@ -54,4 +54,11 @@ jobs:
             pnpm build
             rm -rf /usr/lib/node_modules/paperclipai/node_modules/@paperclipai/server/ui-dist
             ln -s /home/claudeuser/clawd/paperclip/ui/dist /usr/lib/node_modules/paperclipai/node_modules/@paperclipai/server/ui-dist
-            echo "Code synced and UI deployed to production"
+            # Deploy server dist — symlink fork's compiled server over global npm
+            SERVER_DIST=/usr/lib/node_modules/paperclipai/node_modules/@paperclipai/server/dist
+            FORK_DIST=/home/claudeuser/clawd/paperclip/server/dist
+            rm -rf "$SERVER_DIST"
+            ln -s "$FORK_DIST" "$SERVER_DIST"
+            # Reload server process (CI runs as root so PM2 restart works)
+            pm2 reload paperclip --update-env 2>/dev/null || pm2 restart paperclip --update-env 2>/dev/null || true
+            echo "Code synced, UI + server deployed to production"
