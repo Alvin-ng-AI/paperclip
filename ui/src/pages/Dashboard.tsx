@@ -66,6 +66,7 @@ interface KpiCard {
   color: string;
   sub: string;
   subColor: string;
+  to?: string;
 }
 
 // ── Main component ───────────────────────────────────────────────────────────
@@ -206,6 +207,7 @@ export function Dashboard() {
       color: "#818CF8",
       sub: summary && summary.tasks.inProgress > 0 ? `↑ ${summary.tasks.inProgress} running` : "none running",
       subColor: summary && summary.tasks.inProgress > 0 ? "#22C55E" : "#6B7280",
+      to: "/issues?status=in_progress",
     },
     {
       label: "In Review",
@@ -213,6 +215,7 @@ export function Dashboard() {
       color: "#FBB724",
       sub: "needs you",
       subColor: "#F59E0B",
+      to: "/issues?status=in_review",
     },
     {
       label: "Done",
@@ -220,6 +223,7 @@ export function Dashboard() {
       color: "#22C55E",
       sub: summary && summary.tasks.done > 0 ? `↑ total` : "none yet",
       subColor: "#22C55E",
+      to: "/issues?status=done",
     },
     {
       label: "Blocked",
@@ -227,6 +231,7 @@ export function Dashboard() {
       color: "#EF4444",
       sub: summary && summary.tasks.blocked > 0 ? "needs action" : "all clear",
       subColor: summary && summary.tasks.blocked > 0 ? "#EF4444" : "#22C55E",
+      to: "/issues?status=blocked",
     },
   ];
 
@@ -267,30 +272,44 @@ export function Dashboard() {
 
       {/* ── KPI Strip ──────────────────────────────────────────────────── */}
       <div className="flex gap-2 px-4 py-3 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
-        {kpiCards.map((card) => (
-          <div
-            key={card.label}
-            className="flex-shrink-0 rounded-xl p-3"
-            style={{
-              background: "#0D1220",
-              border: "1px solid rgba(255,255,255,0.06)",
-              minWidth: "100px",
-            }}
-          >
-            <div className="text-[22px] font-extrabold" style={{ color: card.color }}>
-              {card.count}
-            </div>
-            <div
-              className="text-[10px] mt-0.5 uppercase tracking-wider"
-              style={{ color: "#6B7280" }}
+        {kpiCards.map((card) => {
+          const cardContent = (
+            <>
+              <div className="text-[22px] font-extrabold" style={{ color: card.color }}>
+                {card.count}
+              </div>
+              <div
+                className="text-[10px] mt-0.5 uppercase tracking-wider"
+                style={{ color: "#6B7280" }}
+              >
+                {card.label}
+              </div>
+              <div className="text-[10px] mt-1" style={{ color: card.subColor }}>
+                {card.sub}
+              </div>
+            </>
+          );
+          const cardStyle = {
+            background: "#0D1220",
+            border: "1px solid rgba(255,255,255,0.06)",
+            minWidth: "100px",
+          };
+          const cardClass = "flex-shrink-0 rounded-xl p-3 transition-opacity hover:opacity-80";
+          return card.to ? (
+            <Link
+              key={card.label}
+              to={card.to}
+              className={`${cardClass} no-underline text-inherit`}
+              style={cardStyle}
             >
-              {card.label}
+              {cardContent}
+            </Link>
+          ) : (
+            <div key={card.label} className={cardClass} style={cardStyle}>
+              {cardContent}
             </div>
-            <div className="text-[10px] mt-1" style={{ color: card.subColor }}>
-              {card.sub}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* ── Team Status ────────────────────────────────────────────────── */}
