@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
-import { useParams, useNavigate, useLocation, Navigate } from "@/lib/router";
+import { useParams, useNavigate, useLocation, Navigate, useSearchParams } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { PROJECT_COLORS, isUuidLike, type BudgetPolicySummary } from "@paperclipai/shared";
 import { budgetsApi } from "../api/budgets";
@@ -51,7 +51,7 @@ function resolveProjectTab(pathname: string, projectId: string): ProjectTab | nu
 
 /* ── Project Status Stats ── */
 
-function ProjectStatusStats({ projectId, companyId }: { projectId: string; companyId: string }) {
+function ProjectStatusStats({ projectId, companyId, projectRef }: { projectId: string; companyId: string; projectRef?: string }) {
   const { data: issues } = useQuery({
     queryKey: [...queryKeys.issues.listByProject(companyId, projectId), "overview-stats"],
     queryFn: () => issuesApi.list(companyId, { projectId }),
@@ -90,7 +90,7 @@ function ProjectStatusStats({ projectId, companyId }: { projectId: string; compa
         {statCards.map(card => (
           <Link
             key={card.label}
-            to={`/issues?status=${card.status}`}
+            to={projectRef ? `/projects/${projectRef}/issues?status=${card.status}` : `/issues?status=${card.status}`}
             className="rounded-lg p-3 no-underline text-inherit transition-opacity hover:opacity-80"
             style={{ background: card.bg, border: `1px solid ${card.color}30` }}
           >
@@ -231,6 +231,8 @@ function ColorPicker({
 
 function ProjectIssuesList({ projectId, companyId }: { projectId: string; companyId: string }) {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const initialStatus = searchParams.get("status") ?? undefined;
 
   const { data: agents } = useQuery({
     queryKey: queryKeys.agents.list(companyId),
@@ -277,6 +279,7 @@ function ProjectIssuesList({ projectId, companyId }: { projectId: string; compan
       liveIssueIds={liveIssueIds}
       projectId={projectId}
       viewStateKey={`paperclip:project-view:${projectId}`}
+      initialStatuses={initialStatus ? [initialStatus] : undefined}
       onUpdateIssue={(id, data) => updateIssue.mutate({ id, data })}
     />
   );
@@ -659,7 +662,7 @@ export function ProjectDetail() {
       {activeTab === "overview" && (
         <>
           {project?.id && resolvedCompanyId && (
-            <ProjectStatusStats projectId={project.id} companyId={resolvedCompanyId} />
+            <ProjectStatusStats projectId={project.id} companyId={resolvedCompanyId} projectRef={canonicalProjectRef} />
           )}
           <OverviewContent
             project={project}
