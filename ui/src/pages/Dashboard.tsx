@@ -17,7 +17,7 @@ import { timeAgo } from "../lib/timeAgo";
 import { LayoutDashboard, Bell, Plus, ChevronRight, Check, X, MessageSquare, Ban, Hexagon } from "lucide-react";
 import type { Agent, Issue, Project } from "@paperclipai/shared";
 import { AGENT_ROLE_LABELS } from "@paperclipai/shared";
-import { agentUrl, projectUrl } from "../lib/utils";
+import { agentUrl, projectUrl, issueUrl } from "../lib/utils";
 
 // ── Agent status helpers ─────────────────────────────────────────────────────
 
@@ -577,30 +577,34 @@ export function Dashboard() {
                 border: "1px solid rgba(255,255,255,0.06)",
               }}
             >
-              {/* Top row: ID badge + status badge */}
+              {/* Top row: ID badge (linked) + status badge */}
               <div className="flex items-center justify-between mb-1.5">
-                <span
-                  className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: "rgba(99,102,241,0.1)",
-                    color: "#6366F1",
-                  }}
+                <Link
+                  to={issueUrl(issue)}
+                  className="text-[10px] font-bold px-2 py-0.5 rounded-full no-underline"
+                  style={{ background: "rgba(99,102,241,0.1)", color: "#6366F1" }}
                 >
                   {issueId}
-                </span>
+                </Link>
                 <span
                   className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: "rgba(251,191,36,0.15)",
-                    color: "#FBB724",
-                  }}
+                  style={{ background: "rgba(251,191,36,0.15)", color: "#FBB724" }}
                 >
                   IN REVIEW
                 </span>
               </div>
 
-              {/* Title */}
-              <p className="text-[13px] font-semibold mb-1 line-clamp-2">{issue.title}</p>
+              {/* Title (linked) */}
+              <Link to={issueUrl(issue)} className="no-underline text-inherit">
+                <p className="text-[13px] font-semibold mb-1 line-clamp-2 hover:opacity-80">{issue.title}</p>
+              </Link>
+
+              {/* Description snippet */}
+              {issue.description && (
+                <p className="text-[11px] mb-1 line-clamp-2" style={{ color: "#6B7280" }}>
+                  {issue.description.replace(/#+\s*/g, "").replace(/\*\*/g, "").slice(0, 120)}
+                </p>
+              )}
 
               {/* Agent + time */}
               <p className="text-[11px]" style={{ color: "#6B7280" }}>
