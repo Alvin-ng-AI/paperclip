@@ -935,10 +935,10 @@ export function IssueDetail() {
               <Button
                 size="sm"
                 className="bg-red-600 hover:bg-red-500 text-white"
-                disabled={!rejectText.trim() || addComment.isPending}
+                disabled={!rejectText.trim() || updateIssue.isPending}
                 onClick={() => {
-                  addComment.mutate(
-                    { body: `❌ Send back: ${rejectText}`, reopen: true },
+                  updateIssue.mutate(
+                    { status: "in_progress", comment: `❌ Send back: ${rejectText}` },
                     { onSuccess: () => { setRejectOpen(false); setRejectText(""); } },
                   );
                 }}
