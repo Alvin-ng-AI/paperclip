@@ -19,6 +19,38 @@ import type { Agent, Issue, Project } from "@paperclipai/shared";
 import { AGENT_ROLE_LABELS } from "@paperclipai/shared";
 import { agentUrl, projectUrl, issueUrl } from "../lib/utils";
 
+// ── Last agent comment for approval cards ────────────────────────────────────
+
+function LastAgentComment({ issueId }: { issueId: string }) {
+  const { data: comments } = useQuery({
+    queryKey: ["issue-last-comment", issueId],
+    queryFn: () => issuesApi.listComments(issueId),
+    staleTime: 3 * 60_000,
+    retry: false,
+  });
+  const last = comments?.length
+    ? [...comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+    : null;
+  if (!last?.body) return null;
+  // Strip markdown formatting for compact preview
+  const preview = last.body
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/`[^`]+`/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\n{2,}/g, " · ")
+    .replace(/\n/g, " ")
+    .trim()
+    .slice(0, 150);
+  if (!preview) return null;
+  return (
+    <div className="mt-1.5 rounded-md px-2 py-1.5" style={{ background: "rgba(99,102,241,0.06)", borderLeft: "2px solid rgba(99,102,241,0.3)" }}>
+      <div className="text-[9px] uppercase tracking-wider mb-0.5 font-semibold" style={{ color: "#6366F1" }}>Agent report</div>
+      <p className="text-[11px] line-clamp-2" style={{ color: "#9CA3AF" }}>{preview}</p>
+    </div>
+  );
+}
+
 // ── Agent status helpers ─────────────────────────────────────────────────────
 
 type AgentDisplayStatus = "working" | "blocked" | "error" | "idle";
@@ -630,8 +662,11 @@ export function Dashboard() {
                 </p>
               )}
 
+              {/* Last agent comment preview */}
+              <LastAgentComment issueId={issue.id} />
+
               {/* Agent + time */}
-              <p className="text-[11px]" style={{ color: "#6B7280" }}>
+              <p className="text-[11px] mt-1.5" style={{ color: "#6B7280" }}>
                 {assignee ? (
                   <>
                     👤 {assignee.name}
