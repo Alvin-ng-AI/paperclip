@@ -115,11 +115,27 @@ export function Dashboard() {
     enabled: !!selectedCompanyId,
   });
 
+  const { data: inProgressIssues } = useQuery({
+    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "in_progress"],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { status: "in_progress" }),
+    enabled: !!selectedCompanyId,
+  });
+
   const agentMap = useMemo(() => {
     const m = new Map<string, Agent>();
     for (const a of agents ?? []) m.set(a.id, a);
     return m;
   }, [agents]);
+
+  const agentTaskMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const issue of inProgressIssues ?? []) {
+      if (issue.assigneeAgentId && !m.has(issue.assigneeAgentId)) {
+        m.set(issue.assigneeAgentId, issue.title);
+      }
+    }
+    return m;
+  }, [inProgressIssues]);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId!) });
@@ -310,20 +326,27 @@ export function Dashboard() {
           const dot = STATUS_DOT[ds];
           const badge = STATUS_BADGE[ds];
           const roleLabel = AGENT_ROLE_LABELS[agent.role] ?? agent.role;
+          const currentTask = agentTaskMap.get(agent.id);
           return (
             <div
               key={agent.id}
               className="flex items-center gap-2.5 px-4 py-2"
             >
               <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
+                className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
                 style={{ background: dot.bg, boxShadow: dot.shadow }}
               />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold truncate">{agent.name}</div>
-                <div className="text-[11px] truncate" style={{ color: "#6B7280" }}>
-                  {agent.title ?? roleLabel}
-                </div>
+                {ds === "working" && currentTask ? (
+                  <div className="text-[11px] truncate" style={{ color: "#818CF8" }}>
+                    {currentTask}
+                  </div>
+                ) : (
+                  <div className="text-[11px] truncate" style={{ color: "#6B7280" }}>
+                    {agent.title ?? roleLabel}
+                  </div>
+                )}
               </div>
               <div
                 className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
