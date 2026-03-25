@@ -49,7 +49,7 @@ export type IssueViewState = {
 };
 
 const defaultViewState: IssueViewState = {
-  statuses: [],
+  statuses: ["todo", "in_progress", "in_review", "blocked"],
   priorities: [],
   assignees: [],
   labels: [],
