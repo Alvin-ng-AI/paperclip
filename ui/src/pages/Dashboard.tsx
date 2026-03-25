@@ -97,36 +97,42 @@ export function Dashboard() {
     queryKey: queryKeys.dashboard(selectedCompanyId!),
     queryFn: () => dashboardApi.summary(selectedCompanyId!),
     enabled: !!selectedCompanyId,
+    refetchInterval: 60_000,
   });
 
   const { data: agents } = useQuery({
     queryKey: queryKeys.agents.list(selectedCompanyId!),
     queryFn: () => agentsApi.list(selectedCompanyId!),
     enabled: !!selectedCompanyId,
+    refetchInterval: 60_000,
   });
 
   const { data: reviewIssues } = useQuery({
     queryKey: [...queryKeys.issues.list(selectedCompanyId!), "in_review"],
     queryFn: () => issuesApi.list(selectedCompanyId!, { status: "in_review" }),
     enabled: !!selectedCompanyId,
+    refetchInterval: 60_000,
   });
 
   const { data: blockedIssues } = useQuery({
     queryKey: [...queryKeys.issues.list(selectedCompanyId!), "blocked"],
     queryFn: () => issuesApi.list(selectedCompanyId!, { status: "blocked" }),
     enabled: !!selectedCompanyId,
+    refetchInterval: 30_000,
   });
 
   const { data: inProgressIssues } = useQuery({
     queryKey: [...queryKeys.issues.list(selectedCompanyId!), "in_progress"],
     queryFn: () => issuesApi.list(selectedCompanyId!, { status: "in_progress" }),
     enabled: !!selectedCompanyId,
+    refetchInterval: 60_000,
   });
 
   const { data: doneIssues } = useQuery({
     queryKey: [...queryKeys.issues.list(selectedCompanyId!), "done"],
     queryFn: () => issuesApi.list(selectedCompanyId!, { status: "done" }),
     enabled: !!selectedCompanyId,
+    refetchInterval: 5 * 60_000,
     staleTime: 2 * 60 * 1000,
   });
 
