@@ -7,10 +7,13 @@ import {
   Users,
   Inbox,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "../context/CompanyContext";
 import { useDialog } from "../context/DialogContext";
 import { cn } from "../lib/utils";
 import { useInboxBadge } from "../hooks/useInboxBadge";
+import { issuesApi } from "../api/issues";
+import { queryKeys } from "../lib/queryKeys";
 
 interface MobileBottomNavProps {
   visible: boolean;
@@ -39,10 +42,24 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
   const { openNewIssue } = useDialog();
   const inboxBadge = useInboxBadge(selectedCompanyId);
 
+  const { data: blockedIssues } = useQuery({
+    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "blocked"],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { status: "blocked" }),
+    enabled: !!selectedCompanyId,
+    refetchInterval: 30_000,
+  });
+  const blockedCount = blockedIssues?.length ?? 0;
+
   const items = useMemo<MobileNavItem[]>(
     () => [
       { type: "link", to: "/dashboard", label: "Home", icon: House },
-      { type: "link", to: "/issues", label: "Issues", icon: CircleDot },
+      {
+        type: "link",
+        to: "/issues",
+        label: "Issues",
+        icon: CircleDot,
+        badge: blockedCount > 0 ? blockedCount : undefined,
+      },
       { type: "action", label: "Create", icon: SquarePen, onClick: () => openNewIssue() },
       { type: "link", to: "/agents/all", label: "Agents", icon: Users },
       {
@@ -53,7 +70,7 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
         badge: inboxBadge.inbox,
       },
     ],
-    [openNewIssue, inboxBadge.inbox],
+    [openNewIssue, inboxBadge.inbox, blockedCount],
   );
 
   return (
