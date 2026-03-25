@@ -213,6 +213,8 @@ export function IssueDetail() {
   const [attachmentDragActive, setAttachmentDragActive] = useState(false);
   const [unblockOpen, setUnblockOpen] = useState(false);
   const [unblockText, setUnblockText] = useState("");
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectText, setRejectText] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const lastMarkedReadIssueIdRef = useRef<string | null>(null);
 
@@ -737,15 +739,25 @@ export function IssueDetail() {
             onChange={(status) => updateIssue.mutate({ status })}
           />
           {issue.status === "in_review" && (
-            <Button
-              size="sm"
-              className="h-6 px-2 text-xs bg-green-700 hover:bg-green-600 text-white"
-              disabled={updateIssue.isPending}
-              onClick={() => updateIssue.mutate({ status: "done" })}
-            >
-              <Check className="h-3 w-3 mr-1" />
-              Approve
-            </Button>
+            <>
+              <Button
+                size="sm"
+                className="h-6 px-2 text-xs bg-green-700 hover:bg-green-600 text-white"
+                disabled={updateIssue.isPending}
+                onClick={() => updateIssue.mutate({ status: "done" })}
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-xs border-red-500/40 text-red-500 hover:bg-red-500/10 hover:text-red-400"
+                onClick={() => { setRejectOpen(true); setRejectText(""); }}
+              >
+                Send back
+              </Button>
+            </>
           )}
           {issue.status === "blocked" && (
             <Button
@@ -905,6 +917,44 @@ export function IssueDetail() {
             return attachment.contentPath;
           }}
         />
+
+        {rejectOpen && (
+          <div className="rounded-md border border-red-500/30 bg-red-500/5 p-3 space-y-2">
+            <p className="text-xs font-medium text-red-500">
+              Send back for revisions — what needs to change?
+            </p>
+            <textarea
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-red-500/50"
+              rows={3}
+              placeholder="e.g. The copy needs to be shorter / Please fix the bug first..."
+              value={rejectText}
+              onChange={(e) => setRejectText(e.target.value)}
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="bg-red-600 hover:bg-red-500 text-white"
+                disabled={!rejectText.trim() || addComment.isPending}
+                onClick={() => {
+                  addComment.mutate(
+                    { body: `❌ Send back: ${rejectText}`, reopen: true },
+                    { onSuccess: () => { setRejectOpen(false); setRejectText(""); } },
+                  );
+                }}
+              >
+                Send back
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => { setRejectOpen(false); setRejectText(""); }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
 
         {unblockOpen && (
           <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
