@@ -153,6 +153,7 @@ interface Agent {
 interface ProjectOption {
   id: string;
   name: string;
+  color?: string | null;
 }
 
 interface IssuesListProps {
@@ -254,6 +255,11 @@ export function IssuesList({
     if (!id || !agents) return null;
     return agents.find((a) => a.id === id)?.name ?? null;
   }, [agents]);
+
+  const projectMap = useMemo(() => {
+    if (!projects) return new Map<string, ProjectOption>();
+    return new Map(projects.map((p) => [p.id, p]));
+  }, [projects]);
 
   const filtered = useMemo(() => {
     const sourceIssues = normalizedIssueSearch.length > 0 ? searchedIssues : issues;
@@ -752,6 +758,20 @@ export function IssuesList({
                   mobileMeta={timeAgo(issue.updatedAt)}
                   desktopTrailing={(
                     <>
+                      {/* Project pill — only shown when viewing all projects */}
+                      {!projectId && viewState.projects.length === 0 && issue.projectId && projectMap.has(issue.projectId) && (() => {
+                        const proj = projectMap.get(issue.projectId)!;
+                        const c = proj.color ?? "#6366f1";
+                        return (
+                          <span
+                            className="hidden shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium md:inline-flex"
+                            style={{ borderColor: c, color: c, backgroundColor: `${c}1f` }}
+                          >
+                            <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: c }} />
+                            {proj.name}
+                          </span>
+                        );
+                      })()}
                       {(issue.labels ?? []).length > 0 && (
                         <span className="hidden items-center gap-1 overflow-hidden md:flex md:max-w-[240px]">
                           {(issue.labels ?? []).slice(0, 3).map((label) => (
