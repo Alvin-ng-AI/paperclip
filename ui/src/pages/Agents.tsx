@@ -260,6 +260,14 @@ export function Agents() {
                       <span className="text-xs text-muted-foreground font-mono w-14 text-right">
                         {adapterLabels[agent.adapterType] ?? agent.adapterType}
                       </span>
+                      {(agent.spentMonthlyCents ?? 0) > 0 && (
+                        <span className={`text-xs font-mono w-14 text-right tabular-nums ${
+                          agent.budgetMonthlyCents && agent.budgetMonthlyCents > 0 && (agent.spentMonthlyCents ?? 0) > agent.budgetMonthlyCents
+                            ? "text-red-500" : "text-muted-foreground"
+                        }`}>
+                          ${((agent.spentMonthlyCents ?? 0) / 100).toFixed(0)}/mo
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground w-16 text-right">
                         {agent.lastHeartbeatAt ? relativeTime(agent.lastHeartbeatAt) : "—"}
                       </span>
@@ -361,6 +369,14 @@ function OrgTreeNode({
                 <span className="text-xs text-muted-foreground font-mono w-14 text-right">
                   {adapterLabels[agent.adapterType] ?? agent.adapterType}
                 </span>
+                {(agent.spentMonthlyCents ?? 0) > 0 && (
+                  <span className={`text-xs font-mono w-14 text-right tabular-nums ${
+                    agent.budgetMonthlyCents && agent.budgetMonthlyCents > 0 && (agent.spentMonthlyCents ?? 0) > agent.budgetMonthlyCents
+                      ? "text-red-500" : "text-muted-foreground"
+                  }`}>
+                    ${((agent.spentMonthlyCents ?? 0) / 100).toFixed(0)}/mo
+                  </span>
+                )}
                 <span className="text-xs text-muted-foreground w-16 text-right">
                   {agent.lastHeartbeatAt ? relativeTime(agent.lastHeartbeatAt) : "—"}
                 </span>
