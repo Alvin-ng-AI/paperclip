@@ -20,6 +20,7 @@ import { SidebarAgents } from "./SidebarAgents";
 import { useDialog } from "../context/DialogContext";
 import { useCompany } from "../context/CompanyContext";
 import { heartbeatsApi } from "../api/heartbeats";
+import { issuesApi } from "../api/issues";
 import { queryKeys } from "../lib/queryKeys";
 import { useInboxBadge } from "../hooks/useInboxBadge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,14 @@ export function Sidebar() {
     refetchInterval: 10_000,
   });
   const liveRunCount = liveRuns?.length ?? 0;
+
+  const { data: blockedIssues } = useQuery({
+    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "blocked"],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { status: "blocked" }),
+    enabled: !!selectedCompanyId,
+    refetchInterval: 30_000,
+  });
+  const blockedCount = blockedIssues?.length ?? 0;
 
   function openSearch() {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
@@ -98,7 +107,13 @@ export function Sidebar() {
         </div>
 
         <SidebarSection label="Work">
-          <SidebarNavItem to="/issues" label="Issues" icon={CircleDot} />
+          <SidebarNavItem
+            to="/issues"
+            label="Issues"
+            icon={CircleDot}
+            badge={blockedCount > 0 ? blockedCount : undefined}
+            badgeTone="danger"
+          />
           <SidebarNavItem to="/routines" label="Routines" icon={Repeat} textBadge="Beta" textBadgeTone="amber" />
           <SidebarNavItem to="/goals" label="Goals" icon={Target} />
         </SidebarSection>
