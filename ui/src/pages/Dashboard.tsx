@@ -15,6 +15,7 @@ import { timeAgo } from "../lib/timeAgo";
 import { LayoutDashboard, Bell, Plus, ChevronRight, Check, X, MessageSquare, Ban } from "lucide-react";
 import type { Agent, Issue } from "@paperclipai/shared";
 import { AGENT_ROLE_LABELS } from "@paperclipai/shared";
+import { agentUrl } from "../lib/utils";
 
 // ── Agent status helpers ─────────────────────────────────────────────────────
 
@@ -328,9 +329,10 @@ export function Dashboard() {
           const roleLabel = AGENT_ROLE_LABELS[agent.role] ?? agent.role;
           const currentTask = agentTaskMap.get(agent.id);
           return (
-            <div
+            <Link
               key={agent.id}
-              className="flex items-center gap-2.5 px-4 py-2"
+              to={agentUrl(agent)}
+              className="flex items-center gap-2.5 px-4 py-2 no-underline text-inherit transition-colors hover:bg-white/[0.03]"
             >
               <div
                 className="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
@@ -354,7 +356,7 @@ export function Dashboard() {
               >
                 {badge.label}
               </div>
-            </div>
+            </Link>
           );
         })
       )}
