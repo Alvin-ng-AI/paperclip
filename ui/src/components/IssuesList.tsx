@@ -772,6 +772,21 @@ export function IssuesList({
                           </span>
                         );
                       })()}
+                      {/* Quick-approve button for in_review items */}
+                      {issue.status === "in_review" && (
+                        <button
+                          className="hidden shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors hover:bg-green-500/20 md:flex"
+                          style={{ color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)" }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onUpdateIssue(issue.id, { status: "done" });
+                          }}
+                        >
+                          <Check className="h-3 w-3" />
+                          Approve
+                        </button>
+                      )}
                       {(issue.labels ?? []).length > 0 && (
                         <span className="hidden items-center gap-1 overflow-hidden md:flex md:max-w-[240px]">
                           {(issue.labels ?? []).slice(0, 3).map((label) => (
