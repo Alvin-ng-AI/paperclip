@@ -210,9 +210,16 @@ export function Dashboard() {
 
   const rejectMutation = useMutation({
     mutationFn: ({ issueId, reason }: { issueId: string; reason: string }) =>
-      issuesApi.addComment(issueId, `❌ Rejected: ${reason}`, true /* reopen */),
+      issuesApi.update(issueId, { status: "in_progress", comment: `❌ Sent back: ${reason}` }),
     onSuccess: (_d, { issueId }) => { clearCard(issueId); invalidate(); pushToast({ title: "Sent back to agent", tone: "success" }); },
     onError: () => pushToast({ title: "Reject failed", tone: "error" }),
+  });
+
+  const batchApproveMutation = useMutation({
+    mutationFn: (issueIds: string[]) =>
+      Promise.all(issueIds.map((id) => issuesApi.update(id, { status: "done" }))),
+    onSuccess: () => { invalidate(); pushToast({ title: "All approved ✓", tone: "success" }); },
+    onError: () => pushToast({ title: "Batch approve failed", tone: "error" }),
   });
 
   const commentMutation = useMutation({
@@ -487,13 +494,23 @@ export function Dashboard() {
       )}
 
       {/* ── Needs Your Approval ────────────────────────────────────────── */}
-      <div className="px-4 pt-4 pb-2">
+      <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <span
           className="text-xs font-bold uppercase tracking-widest"
           style={{ color: "#4B5563" }}
         >
           Needs Your Approval
         </span>
+        {allApprovalIssues.length > 1 && (
+          <button
+            className="text-[10px] font-semibold px-2 py-0.5 rounded-full transition-colors"
+            style={{ background: "rgba(34,197,94,0.1)", color: "#22C55E", border: "1px solid rgba(34,197,94,0.2)" }}
+            disabled={batchApproveMutation.isPending}
+            onClick={() => batchApproveMutation.mutate(allApprovalIssues.map((i: Issue) => i.id))}
+          >
+            {batchApproveMutation.isPending ? "Approving…" : `Approve All (${allApprovalIssues.length})`}
+          </button>
+        )}
       </div>
 
       {approvalIssues.length === 0 ? (
