@@ -447,6 +447,30 @@ export function Dashboard() {
               );
             })()}
           </div>
+          {shopifySales.by_day.length > 1 && (() => {
+            const days = [...shopifySales.by_day].sort((a, b) => a.date.localeCompare(b.date));
+            const maxRev = Math.max(...days.map(d => d.revenue), 1);
+            const W = 200, H = 28, gap = 3;
+            const barW = Math.max(1, (W - gap * (days.length - 1)) / days.length);
+            return (
+              <div className="mt-2">
+                <svg width={W} height={H} style={{ display: "block" }}>
+                  {days.map((d, i) => {
+                    const h = Math.max(2, (d.revenue / maxRev) * (H - 4));
+                    const x = i * (barW + gap);
+                    const isRecent = d.date >= new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
+                    return (
+                      <rect key={d.date} x={x} y={H - h} width={barW} height={h}
+                        rx="1" fill={isRecent ? "#22C55E" : "rgba(34,197,94,0.35)"} />
+                    );
+                  })}
+                </svg>
+                <div className="text-[9px] mt-0.5" style={{ color: "#374151" }}>
+                  {days[0]?.date.slice(5)} – {days[days.length - 1]?.date.slice(5)}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
