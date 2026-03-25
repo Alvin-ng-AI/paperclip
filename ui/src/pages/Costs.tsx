@@ -810,9 +810,17 @@ export function Costs() {
                                     </SelectTrigger>
                                     <SelectContent>
                                       <SelectItem value="__default__" className="text-xs">Default (claude-sonnet-4-6)</SelectItem>
-                                      {adapterModels.map((m) => (
-                                        <SelectItem key={m.id} value={m.id} className="text-xs">{m.label}</SelectItem>
-                                      ))}
+                                      {adapterModels.map((m) => {
+                                        const hint = m.id.includes("opus") ? "~5× Sonnet cost"
+                                          : m.id.includes("haiku") ? "~80% cheaper"
+                                          : m.id.includes("sonnet") ? "balanced"
+                                          : "";
+                                        return (
+                                          <SelectItem key={m.id} value={m.id} className="text-xs">
+                                            {m.label}{hint ? <span className="ml-1.5 text-muted-foreground">({hint})</span> : null}
+                                          </SelectItem>
+                                        );
+                                      })}
                                     </SelectContent>
                                   </Select>
                                   {isPending && <span className="text-[10px] text-muted-foreground">Saving…</span>}
