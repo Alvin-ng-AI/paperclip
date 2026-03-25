@@ -123,6 +123,21 @@ export function Dashboard() {
     enabled: !!selectedCompanyId,
   });
 
+  const { data: doneIssues } = useQuery({
+    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "done"],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { status: "done" }),
+    enabled: !!selectedCompanyId,
+    staleTime: 2 * 60 * 1000,
+  });
+
+  const recentDone = useMemo(() => {
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+    return (doneIssues ?? [])
+      .filter((i) => new Date(i.updatedAt).getTime() > cutoff)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 5);
+  }, [doneIssues]);
+
   const agentMap = useMemo(() => {
     const m = new Map<string, Agent>();
     for (const a of agents ?? []) m.set(a.id, a);
@@ -777,6 +792,55 @@ export function Dashboard() {
                     </button>
                   </div>
                 )}
+              </div>
+            );
+          })}
+        </>
+      )}
+
+      {/* ── Recent Completions ────────────────────────────────────── */}
+      {recentDone.length > 0 && (
+        <>
+          <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+            <span
+              className="text-xs font-bold uppercase tracking-widest"
+              style={{ color: "#4B5563" }}
+            >
+              Recent Completions
+            </span>
+            <Link
+              to="/issues?status=done"
+              className="text-xs font-semibold flex items-center gap-0.5 no-underline"
+              style={{ color: "#6366F1" }}
+            >
+              See all <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          {recentDone.map((issue) => {
+            const assignee = issue.assigneeAgentId ? agentMap.get(issue.assigneeAgentId) : null;
+            return (
+              <div
+                key={issue.id}
+                className="flex items-center gap-2.5 px-4 py-2 cursor-pointer transition-colors hover:bg-white/[0.03]"
+                onClick={() => navigate(`/issues/${issue.identifier ?? issue.id}`)}
+              >
+                <div
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: "#22C55E" }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold truncate">{issue.title}</div>
+                  <div className="text-[11px] truncate" style={{ color: "#6B7280" }}>
+                    {assignee?.name ?? "—"} · {timeAgo(issue.updatedAt)}
+                  </div>
+                </div>
+                <span
+                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
+                  style={{ background: "rgba(34,197,94,0.12)", color: "#22C55E" }}
+                >
+                  DONE
+                </span>
               </div>
             );
           })}
