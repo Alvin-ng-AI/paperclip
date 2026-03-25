@@ -305,9 +305,9 @@ export function Costs() {
     staleTime: 300_000,
   });
   const agentsMap = useMemo(() => {
-    const map = new Map<string, Record<string, unknown>>();
+    const map = new Map<string, { adapterConfig: Record<string, unknown>; adapterType: string }>();
     for (const a of agentsList ?? []) {
-      map.set(a.id, (a.adapterConfig ?? {}) as Record<string, unknown>);
+      map.set(a.id, { adapterConfig: (a.adapterConfig ?? {}) as Record<string, unknown>, adapterType: a.adapterType ?? "" });
     }
     return map;
   }, [agentsList]);
@@ -791,7 +791,8 @@ export function Costs() {
                             {/* ── Model selector ── */}
                             {row.agentStatus !== "terminated" && adapterModels && adapterModels.length > 0 ? (() => {
                               const agentInfo = agentsMap.get(row.agentId);
-                              const currentModel = (agentInfo?.model as string | undefined) ?? "";
+                              if (agentInfo?.adapterType && !["claude_local"].includes(agentInfo.adapterType)) return null;
+                              const currentModel = (agentInfo?.adapterConfig?.model as string | undefined) ?? "";
                               const isPending = modelMutation.isPending && (modelMutation.variables as { agentId: string })?.agentId === row.agentId;
                               return (
                                 <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
