@@ -286,7 +286,9 @@ export function Dashboard() {
 
   const sortedAgents = sortAgents(agents ?? []);
   const displayAgents = sortedAgents.slice(0, 5);
-  const approvalIssues = reviewIssues ?? [];
+  const allApprovalIssues = reviewIssues ?? [];
+  const approvalIssues = allApprovalIssues.slice(0, 5);
+  const approvalOverflow = Math.max(0, allApprovalIssues.length - 5);
 
   return (
     // Break out of the layout's p-4 md:p-6 padding
@@ -708,6 +710,23 @@ export function Dashboard() {
             </div>
           );
         })
+      )}
+
+      {approvalOverflow > 0 && (
+        <div className="mx-4 mb-2">
+          <Link
+            to="/issues?status=in_review"
+            className="flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold no-underline transition-colors hover:opacity-80"
+            style={{
+              background: "#0D1220",
+              border: "1px solid rgba(251,191,36,0.2)",
+              color: "#FBB724",
+            }}
+          >
+            <ChevronRight className="h-3 w-3" />
+            {approvalOverflow} more waiting for approval
+          </Link>
+        </div>
       )}
 
       {/* ── Blocked — Needs Your Input ─────────────────────────────── */}
