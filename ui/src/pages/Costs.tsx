@@ -10,6 +10,7 @@ import type {
   QuotaWindow,
 } from "@paperclipai/shared";
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronRight, Coins, DollarSign, ReceiptText } from "lucide-react";
+import { agentsApi } from "../api/agents";
 import { budgetsApi } from "../api/budgets";
 import { costsApi } from "../api/costs";
 import { BillerSpendCard } from "../components/BillerSpendCard";
@@ -31,6 +32,7 @@ import { queryKeys } from "../lib/queryKeys";
 import { billingTypeDisplayName, cn, formatCents, formatTokens, providerDisplayName } from "../lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const NO_COMPANY = "__none__";
@@ -288,6 +290,32 @@ export function Costs() {
     }
     return map;
   }, [spendData?.byAgentModel]);
+
+  // ── Model management ──────────────────────────────────────────────────────
+  const { data: agentsList, refetch: refetchAgents } = useQuery({
+    queryKey: queryKeys.agents.list(companyId),
+    queryFn: () => agentsApi.list(companyId),
+    enabled: !!selectedCompanyId && mainTab === "overview",
+    staleTime: 60_000,
+  });
+  const { data: adapterModels } = useQuery({
+    queryKey: ["adapter-models", companyId, "claude_local"],
+    queryFn: () => agentsApi.adapterModels(companyId, "claude_local"),
+    enabled: !!selectedCompanyId && mainTab === "overview",
+    staleTime: 300_000,
+  });
+  const agentsMap = useMemo(() => {
+    const map = new Map<string, Record<string, unknown>>();
+    for (const a of agentsList ?? []) {
+      map.set(a.id, (a.adapterConfig ?? {}) as Record<string, unknown>);
+    }
+    return map;
+  }, [agentsList]);
+  const modelMutation = useMutation({
+    mutationFn: ({ agentId, model }: { agentId: string; model: string }) =>
+      agentsApi.update(agentId, { adapterConfig: { model } }, companyId),
+    onSuccess: () => { void refetchAgents(); },
+  });
 
   const { data: providerData } = useQuery({
     queryKey: queryKeys.usageByProvider(companyId, from || undefined, to || undefined),
@@ -760,6 +788,36 @@ export function Costs() {
                                 ) : null}
                               </div>
                             </div>
+                            {/* ── Model selector ── */}
+                            {row.agentStatus !== "terminated" && adapterModels && adapterModels.length > 0 ? (() => {
+                              const agentInfo = agentsMap.get(row.agentId);
+                              const currentModel = (agentInfo?.model as string | undefined) ?? "";
+                              const isPending = modelMutation.isPending && (modelMutation.variables as { agentId: string })?.agentId === row.agentId;
+                              return (
+                                <div className="mt-2 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                  <span className="text-[10px] text-muted-foreground shrink-0">Model</span>
+                                  <Select
+                                    value={currentModel || "__default__"}
+                                    disabled={isPending}
+                                    onValueChange={(v) => {
+                                      const model = v === "__default__" ? "" : v;
+                                      modelMutation.mutate({ agentId: row.agentId, model: model || "claude-sonnet-4-6" });
+                                    }}
+                                  >
+                                    <SelectTrigger className="h-6 text-[10px] px-2 py-0 w-48 border-border/50">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="__default__" className="text-xs">Default (claude-sonnet-4-6)</SelectItem>
+                                      {adapterModels.map((m) => (
+                                        <SelectItem key={m.id} value={m.id} className="text-xs">{m.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {isPending && <span className="text-[10px] text-muted-foreground">Saving…</span>}
+                                </div>
+                              );
+                            })() : null}
 
                             {isExpanded && modelRows.length > 0 ? (
                               <div className="mt-3 space-y-2 border-l border-border pl-4">
