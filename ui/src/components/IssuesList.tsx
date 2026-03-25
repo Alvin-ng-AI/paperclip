@@ -165,6 +165,7 @@ interface IssuesListProps {
   viewStateKey: string;
   issueLinkState?: unknown;
   initialAssignees?: string[];
+  initialStatuses?: string[];
   initialSearch?: string;
   onSearchChange?: (search: string) => void;
   onUpdateIssue: (id: string, data: Record<string, unknown>) => void;
@@ -181,6 +182,7 @@ export function IssuesList({
   viewStateKey,
   issueLinkState,
   initialAssignees,
+  initialStatuses,
   initialSearch,
   onSearchChange,
   onUpdateIssue,
@@ -198,7 +200,10 @@ export function IssuesList({
 
   const [viewState, setViewState] = useState<IssueViewState>(() => {
     if (initialAssignees) {
-      return { ...defaultViewState, assignees: initialAssignees, statuses: [] };
+      return { ...defaultViewState, assignees: initialAssignees, statuses: initialStatuses ?? [] };
+    }
+    if (initialStatuses && initialStatuses.length > 0) {
+      return { ...defaultViewState, statuses: initialStatuses };
     }
     return getViewState(scopedKey);
   });

@@ -21,6 +21,7 @@ export function Issues() {
   const queryClient = useQueryClient();
 
   const initialSearch = searchParams.get("q") ?? "";
+  const initialStatuses = searchParams.get("status") ? [searchParams.get("status")!] : undefined;
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const handleSearchChange = useCallback((search: string) => {
     clearTimeout(debounceRef.current);
@@ -114,6 +115,7 @@ export function Issues() {
       viewStateKey="paperclip:issues-view"
       issueLinkState={issueLinkState}
       initialAssignees={searchParams.get("assignee") ? [searchParams.get("assignee")!] : undefined}
+      initialStatuses={initialStatuses}
       initialSearch={initialSearch}
       onSearchChange={handleSearchChange}
       onUpdateIssue={(id, data) => updateIssue.mutate({ id, data })}
