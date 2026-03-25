@@ -211,6 +211,8 @@ export function IssueDetail() {
   });
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [attachmentDragActive, setAttachmentDragActive] = useState(false);
+  const [unblockOpen, setUnblockOpen] = useState(false);
+  const [unblockText, setUnblockText] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const lastMarkedReadIssueIdRef = useRef<string | null>(null);
 
@@ -725,6 +727,16 @@ export function IssueDetail() {
               Approve
             </Button>
           )}
+          {issue.status === "blocked" && (
+            <Button
+              size="sm"
+              className="h-6 px-2 text-xs bg-amber-600 hover:bg-amber-500 text-white"
+              onClick={() => { setUnblockOpen(true); setUnblockText(""); }}
+            >
+              <MessageSquare className="h-3 w-3 mr-1" />
+              Unblock
+            </Button>
+          )}
           <PriorityIcon
             priority={issue.priority}
             onChange={(priority) => updateIssue.mutate({ priority })}
@@ -873,6 +885,44 @@ export function IssueDetail() {
             return attachment.contentPath;
           }}
         />
+
+        {unblockOpen && (
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+            <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+              Provide the info needed to unblock this task:
+            </p>
+            <textarea
+              className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-amber-500/50"
+              rows={3}
+              placeholder="e.g. Here are the credentials / The answer is..."
+              value={unblockText}
+              onChange={(e) => setUnblockText(e.target.value)}
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                className="bg-amber-600 hover:bg-amber-500 text-white"
+                disabled={!unblockText.trim() || addComment.isPending}
+                onClick={() => {
+                  addComment.mutate(
+                    { body: unblockText, reopen: true },
+                    { onSuccess: () => { setUnblockOpen(false); setUnblockText(""); } },
+                  );
+                }}
+              >
+                Unblock
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => { setUnblockOpen(false); setUnblockText(""); }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       <PluginSlotOutlet
