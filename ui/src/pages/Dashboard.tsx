@@ -507,6 +507,11 @@ export function Dashboard() {
                   </div>
                 )}
               </div>
+              {(agent.spentMonthlyCents ?? 0) > 0 && (
+                <div className="text-[10px] flex-shrink-0" style={{ color: "#4B5563" }}>
+                  ${((agent.spentMonthlyCents ?? 0) / 100).toFixed(0)}
+                </div>
+              )}
               <div
                 className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
                 style={{ background: badge.bg, color: badge.color }}
