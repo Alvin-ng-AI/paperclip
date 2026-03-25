@@ -5,6 +5,7 @@ import { dashboardApi } from "../api/dashboard";
 import { issuesApi } from "../api/issues";
 import { agentsApi } from "../api/agents";
 import { projectsApi } from "../api/projects";
+import { shopifyApi } from "../api/shopify";
 import { useCompany } from "../context/CompanyContext";
 import { useDialog } from "../context/DialogContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
@@ -152,6 +153,14 @@ export function Dashboard() {
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
       .slice(0, 5);
   }, [doneIssues]);
+
+  const { data: shopifySales } = useQuery({
+    queryKey: ["shopify", "sales", "7d"],
+    queryFn: () => shopifyApi.sales(7),
+    refetchInterval: 5 * 60_000,
+    staleTime: 3 * 60_000,
+    retry: false, // Don't retry if bridge is down
+  });
 
   const agentMap = useMemo(() => {
     const m = new Map<string, Agent>();
@@ -362,6 +371,52 @@ export function Dashboard() {
           );
         })}
       </div>
+
+      {/* ── Awoofi Live Revenue ─────────────────────────────────────────── */}
+      {shopifySales && (
+        <div className="mx-4 my-3 rounded-xl p-3" style={{ background: "#0D1220", border: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#4B5563" }}>
+              Awoofi Store
+            </span>
+            <span className="text-[10px]" style={{ color: "#4B5563" }}>
+              {shopifySales.period_days}d · {shopifySales.currency}
+            </span>
+          </div>
+          <div className="flex gap-4">
+            <div>
+              <div className="text-[22px] font-extrabold" style={{ color: "#22C55E" }}>
+                {parseFloat(shopifySales.total_revenue).toFixed(0)}
+              </div>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: "#6B7280" }}>Revenue</div>
+            </div>
+            <div>
+              <div className="text-[22px] font-extrabold" style={{ color: "#6366F1" }}>
+                {shopifySales.total_orders}
+              </div>
+              <div className="text-[10px] uppercase tracking-wider" style={{ color: "#6B7280" }}>Orders</div>
+            </div>
+            {shopifySales.by_day.length > 0 && (() => {
+              const today = new Date().toISOString().slice(0, 10);
+              const yesterday = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
+              const todayData = shopifySales.by_day.find(d => d.date === today);
+              const yestData = shopifySales.by_day.find(d => d.date === yesterday);
+              const latest = todayData ?? yestData;
+              if (!latest) return null;
+              return (
+                <div>
+                  <div className="text-[22px] font-extrabold" style={{ color: "#F59E0B" }}>
+                    {latest.revenue.toFixed(0)}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wider" style={{ color: "#6B7280" }}>
+                    {todayData ? "Today" : "Yesterday"}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       {/* ── Team Status ────────────────────────────────────────────────── */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
