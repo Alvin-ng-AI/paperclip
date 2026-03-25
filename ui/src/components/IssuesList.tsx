@@ -191,6 +191,7 @@ export function IssuesList({
 }: IssuesListProps) {
   const { selectedCompanyId } = useCompany();
   const { openNewIssue } = useDialog();
+  const [batchPending, setBatchPending] = useState(false);
   const { data: session } = useQuery({
     queryKey: queryKeys.auth.session,
     queryFn: () => authApi.getSession(),
@@ -337,6 +338,25 @@ export function IssuesList({
             <Plus className="h-4 w-4 sm:mr-1" />
             <span className="hidden sm:inline">New Issue</span>
           </Button>
+          {viewState.statuses.length === 1 && viewState.statuses[0] === "in_review" && filtered.filter(i => i.status === "in_review").length > 0 && (
+            <Button
+              size="sm"
+              className="bg-green-700 hover:bg-green-600 text-white text-xs"
+              disabled={batchPending}
+              onClick={async () => {
+                const toApprove = filtered.filter(i => i.status === "in_review");
+                setBatchPending(true);
+                try {
+                  await Promise.all(toApprove.map(i => Promise.resolve(onUpdateIssue(i.id, { status: "done" }))));
+                } finally {
+                  setBatchPending(false);
+                }
+              }}
+            >
+              <Check className="h-3.5 w-3.5 mr-1" />
+              {batchPending ? "Approving…" : `Approve All (${filtered.filter(i => i.status === "in_review").length})`}
+            </Button>
+          )}
           <div className="relative w-48 sm:w-64 md:w-80">
             <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
