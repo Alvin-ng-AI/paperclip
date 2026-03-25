@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dashboardApi } from "../api/dashboard";
 import { issuesApi } from "../api/issues";
 import { agentsApi } from "../api/agents";
+import { projectsApi } from "../api/projects";
 import { useCompany } from "../context/CompanyContext";
 import { useDialog } from "../context/DialogContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
@@ -12,10 +13,10 @@ import { queryKeys } from "../lib/queryKeys";
 import { EmptyState } from "../components/EmptyState";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { timeAgo } from "../lib/timeAgo";
-import { LayoutDashboard, Bell, Plus, ChevronRight, Check, X, MessageSquare, Ban } from "lucide-react";
-import type { Agent, Issue } from "@paperclipai/shared";
+import { LayoutDashboard, Bell, Plus, ChevronRight, Check, X, MessageSquare, Ban, Hexagon } from "lucide-react";
+import type { Agent, Issue, Project } from "@paperclipai/shared";
 import { AGENT_ROLE_LABELS } from "@paperclipai/shared";
-import { agentUrl } from "../lib/utils";
+import { agentUrl, projectUrl } from "../lib/utils";
 
 // ── Agent status helpers ─────────────────────────────────────────────────────
 
@@ -128,6 +129,14 @@ export function Dashboard() {
     refetchInterval: 60_000,
   });
 
+  const { data: projects } = useQuery({
+    queryKey: queryKeys.projects.list(selectedCompanyId!),
+    queryFn: () => projectsApi.list(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+    refetchInterval: 5 * 60_000,
+    staleTime: 2 * 60 * 1000,
+  });
+
   const { data: doneIssues } = useQuery({
     queryKey: [...queryKeys.issues.list(selectedCompanyId!), "done"],
     queryFn: () => issuesApi.list(selectedCompanyId!, { status: "done" }),
@@ -159,6 +168,25 @@ export function Dashboard() {
     }
     return m;
   }, [inProgressIssues]);
+
+  // Map projectId → { active, blocked, review }
+  const projectStatusMap = useMemo(() => {
+    const m = new Map<string, { active: number; blocked: number; review: number }>();
+    for (const issue of [...(inProgressIssues ?? []), ...(blockedIssues ?? []), ...(reviewIssues ?? [])]) {
+      if (!issue.projectId) continue;
+      const cur = m.get(issue.projectId) ?? { active: 0, blocked: 0, review: 0 };
+      if (issue.status === "blocked") cur.blocked++;
+      else if (issue.status === "in_review") cur.review++;
+      else cur.active++;
+      m.set(issue.projectId, cur);
+    }
+    return m;
+  }, [inProgressIssues, blockedIssues, reviewIssues]);
+
+  const activeProjects = useMemo(
+    () => (projects ?? []).filter((p: Project) => !p.archivedAt),
+    [projects],
+  );
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(selectedCompanyId!) });
@@ -850,6 +878,59 @@ export function Dashboard() {
               </div>
             );
           })}
+        </>
+      )}
+
+      {/* ── Client Channels ─────────────────────────────────────── */}
+      {activeProjects.length > 0 && (
+        <>
+          <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+            <span
+              className="text-xs font-bold uppercase tracking-widest"
+              style={{ color: "#4B5563" }}
+            >
+              Client Channels
+            </span>
+          </div>
+          <div className="px-4 flex flex-col gap-1.5 pb-2">
+            {activeProjects.map((project: Project) => {
+              const counts = projectStatusMap.get(project.id) ?? { active: 0, blocked: 0, review: 0 };
+              const total = counts.active + counts.blocked + counts.review;
+              const url = projectUrl(project);
+              return (
+                <Link
+                  key={project.id}
+                  to={url ? `${url}/issues` : "/projects"}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 no-underline text-inherit transition-colors hover:bg-white/[0.03]"
+                  style={{
+                    background: "#0D1220",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <span
+                    className="h-2.5 w-2.5 rounded-sm flex-shrink-0"
+                    style={{ background: project.color ?? "#6366F1" }}
+                  />
+                  <span className="flex-1 text-[13px] font-medium truncate">{project.name}</span>
+                  {total === 0 ? (
+                    <span className="text-[11px]" style={{ color: "#374151" }}>No active tasks</span>
+                  ) : (
+                    <span className="flex items-center gap-2 text-[11px]">
+                      {counts.blocked > 0 && (
+                        <span style={{ color: "#EF4444" }}>🔴 {counts.blocked}</span>
+                      )}
+                      {counts.review > 0 && (
+                        <span style={{ color: "#FBB724" }}>🔔 {counts.review}</span>
+                      )}
+                      {counts.active > 0 && (
+                        <span style={{ color: "#818CF8" }}>🟡 {counts.active}</span>
+                      )}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
         </>
       )}
 
