@@ -21,6 +21,8 @@ import { IssuesList } from "../components/IssuesList";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { PageTabBar } from "../components/PageTabBar";
 import { projectRouteRef, cn } from "../lib/utils";
+import { timeAgo } from "../lib/timeAgo";
+import { Link } from "@/lib/router";
 import { Tabs } from "@/components/ui/tabs";
 import { PluginLauncherOutlet } from "@/plugins/launchers";
 import { PluginSlotMount, PluginSlotOutlet, usePluginSlots } from "@/plugins/slots";
@@ -45,6 +47,86 @@ function resolveProjectTab(pathname: string, projectId: string): ProjectTab | nu
   if (tab === "budget") return "budget";
   if (tab === "issues") return "list";
   return null;
+}
+
+/* ── Project Status Stats ── */
+
+function ProjectStatusStats({ projectId, companyId }: { projectId: string; companyId: string }) {
+  const { data: issues } = useQuery({
+    queryKey: [...queryKeys.issues.listByProject(companyId, projectId), "overview-stats"],
+    queryFn: () => issuesApi.list(companyId, { projectId }),
+    enabled: !!(projectId && companyId),
+    staleTime: 60_000,
+    refetchInterval: 2 * 60_000,
+  });
+
+  const stats = useMemo(() => {
+    const all = issues ?? [];
+    return {
+      blocked: all.filter(i => i.status === "blocked").length,
+      inReview: all.filter(i => i.status === "in_review").length,
+      active: all.filter(i => i.status === "in_progress" || i.status === "todo").length,
+      done: all.filter(i => i.status === "done").length,
+      recent: all
+        .filter(i => i.status === "done")
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+        .slice(0, 3),
+      blockedItems: all.filter(i => i.status === "blocked").slice(0, 3),
+    };
+  }, [issues]);
+
+  if (!issues) return null;
+
+  const statCards = [
+    { label: "Blocked", value: stats.blocked, color: "#EF4444", bg: "rgba(239,68,68,0.1)", status: "blocked" },
+    { label: "In Review", value: stats.inReview, color: "#F59E0B", bg: "rgba(245,158,11,0.1)", status: "in_review" },
+    { label: "Active", value: stats.active, color: "#6366F1", bg: "rgba(99,102,241,0.1)", status: "in_progress" },
+    { label: "Done", value: stats.done, color: "#22C55E", bg: "rgba(34,197,94,0.1)", status: "done" },
+  ];
+
+  return (
+    <div className="mb-6 space-y-3">
+      <div className="grid grid-cols-4 gap-2">
+        {statCards.map(card => (
+          <Link
+            key={card.label}
+            to={`/issues?status=${card.status}`}
+            className="rounded-lg p-3 no-underline text-inherit transition-opacity hover:opacity-80"
+            style={{ background: card.bg, border: `1px solid ${card.color}30` }}
+          >
+            <div className="text-xl font-extrabold" style={{ color: card.color }}>{card.value}</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">{card.label}</div>
+          </Link>
+        ))}
+      </div>
+      {stats.blockedItems.length > 0 && (
+        <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-3 space-y-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-red-500 mb-2">Needs Unblocking</p>
+          {stats.blockedItems.map(i => (
+            <Link key={i.id} to={`/issues/${i.identifier ?? i.id}`}
+              className="flex items-center gap-2 text-xs no-underline text-inherit hover:opacity-80">
+              <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
+              <span className="truncate">{i.title}</span>
+              <span className="ml-auto text-muted-foreground shrink-0">{i.identifier ?? ""}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+      {stats.recent.length > 0 && (
+        <div className="rounded-lg border border-border p-3 space-y-1.5">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">Recently Done</p>
+          {stats.recent.map(i => (
+            <Link key={i.id} to={`/issues/${i.identifier ?? i.id}`}
+              className="flex items-center gap-2 text-xs no-underline text-inherit hover:opacity-80">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500 shrink-0" />
+              <span className="truncate">{i.title}</span>
+              <span className="ml-auto text-muted-foreground shrink-0">{timeAgo(i.updatedAt)}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ── Overview tab content ── */
@@ -575,14 +657,19 @@ export function ProjectDetail() {
       </Tabs>
 
       {activeTab === "overview" && (
-        <OverviewContent
-          project={project}
-          onUpdate={(data) => updateProject.mutate(data)}
-          imageUploadHandler={async (file) => {
-            const asset = await uploadImage.mutateAsync(file);
-            return asset.contentPath;
-          }}
-        />
+        <>
+          {project?.id && resolvedCompanyId && (
+            <ProjectStatusStats projectId={project.id} companyId={resolvedCompanyId} />
+          )}
+          <OverviewContent
+            project={project}
+            onUpdate={(data) => updateProject.mutate(data)}
+            imageUploadHandler={async (file) => {
+              const asset = await uploadImage.mutateAsync(file);
+              return asset.contentPath;
+            }}
+          />
+        </>
       )}
 
       {activeTab === "list" && project?.id && resolvedCompanyId && (
