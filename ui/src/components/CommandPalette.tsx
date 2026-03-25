@@ -28,6 +28,9 @@ import {
   History,
   SquarePen,
   Plus,
+  Search,
+  AlertTriangle,
+  Clock,
 } from "lucide-react";
 import { Identity } from "./Identity";
 import { agentUrl, projectUrl } from "../lib/utils";
@@ -173,6 +176,27 @@ export function CommandPalette() {
           <CommandItem onSelect={() => go("/activity")}>
             <History className="mr-2 h-4 w-4" />
             Activity
+          </CommandItem>
+          <CommandItem onSelect={() => go("/search")}>
+            <Search className="mr-2 h-4 w-4" />
+            Search
+          </CommandItem>
+        </CommandGroup>
+
+        <CommandSeparator />
+
+        <CommandGroup heading="Quick Filters">
+          <CommandItem onSelect={() => go("/issues?status=blocked")}>
+            <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
+            Blocked Issues
+          </CommandItem>
+          <CommandItem onSelect={() => go("/issues?status=in_review")}>
+            <Clock className="mr-2 h-4 w-4 text-yellow-500" />
+            Needs Approval
+          </CommandItem>
+          <CommandItem onSelect={() => go("/issues?status=in_progress")}>
+            <CircleDot className="mr-2 h-4 w-4 text-indigo-400" />
+            Active Issues
           </CommandItem>
         </CommandGroup>
 
