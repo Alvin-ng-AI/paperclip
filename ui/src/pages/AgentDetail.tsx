@@ -992,6 +992,7 @@ export function AgentDetail() {
           runtimeState={runtimeState}
           agentId={agent.id}
           agentRouteId={canonicalAgentRef}
+          companyId={resolvedCompanyId ?? undefined}
         />
       )}
 
@@ -1140,6 +1141,7 @@ function AgentOverview({
   runtimeState,
   agentId,
   agentRouteId,
+  companyId,
 }: {
   agent: AgentDetailRecord;
   runs: HeartbeatRun[];
@@ -1147,7 +1149,20 @@ function AgentOverview({
   runtimeState?: AgentRuntimeState;
   agentId: string;
   agentRouteId: string;
+  companyId?: string;
 }) {
+  const queryClient = useQueryClient();
+  const approveMutation = useMutation({
+    mutationFn: (issueId: string) => issuesApi.update(issueId, { status: "done" }),
+    onSuccess: () => {
+      if (companyId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(companyId) });
+      }
+    },
+  });
+
+  const reviewIssues = assignedIssues.filter((i) => i.status === "in_review");
+
   return (
     <div className="space-y-8">
       {/* Latest Run */}
@@ -1168,6 +1183,40 @@ function AgentOverview({
           <SuccessRateChart runs={runs} />
         </ChartCard>
       </div>
+
+      {/* Awaiting Approval */}
+      {reviewIssues.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium">
+            Awaiting Approval
+            <span className="ml-2 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-amber-500/20 text-amber-500">
+              {reviewIssues.length}
+            </span>
+          </h3>
+          <div className="border border-amber-500/30 rounded-lg divide-y divide-border">
+            {reviewIssues.map((issue) => (
+              <div key={issue.id} className="flex items-center justify-between px-3 py-2 gap-2">
+                <Link
+                  to={`/issues/${issue.identifier ?? issue.id}`}
+                  className="flex items-center gap-2 min-w-0 flex-1 text-sm hover:text-foreground text-muted-foreground transition-colors no-underline"
+                >
+                  <span className="font-mono text-xs shrink-0">{issue.identifier ?? issue.id.slice(0, 8)}</span>
+                  <span className="truncate text-foreground">{issue.title}</span>
+                </Link>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-7 shrink-0 border-green-500/40 text-green-600 hover:bg-green-500/10 hover:text-green-600"
+                  onClick={() => approveMutation.mutate(issue.id)}
+                  disabled={approveMutation.isPending}
+                >
+                  Approve
+                </Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Issues */}
       <div className="space-y-3">
