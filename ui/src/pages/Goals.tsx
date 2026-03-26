@@ -36,18 +36,32 @@ export function Goals() {
     refetchInterval: 2 * 60_000,
   });
 
+  const { data: doneIssues } = useQuery({
+    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "done-for-goals"],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { status: "done" }),
+    enabled: !!selectedCompanyId && (goals?.length ?? 0) > 0,
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+  });
+
   const goalStats = useMemo(() => {
-    const map = new Map<string, { blocked: number; review: number; active: number }>();
+    const map = new Map<string, { blocked: number; review: number; active: number; done: number }>();
     for (const issue of (activeIssues ?? []) as Issue[]) {
       if (!issue.goalId) continue;
-      const cur = map.get(issue.goalId) ?? { blocked: 0, review: 0, active: 0 };
+      const cur = map.get(issue.goalId) ?? { blocked: 0, review: 0, active: 0, done: 0 };
       if (issue.status === "blocked") cur.blocked++;
       else if (issue.status === "in_review") cur.review++;
       else cur.active++;
       map.set(issue.goalId, cur);
     }
+    for (const issue of (doneIssues ?? []) as Issue[]) {
+      if (!issue.goalId) continue;
+      const cur = map.get(issue.goalId) ?? { blocked: 0, review: 0, active: 0, done: 0 };
+      cur.done++;
+      map.set(issue.goalId, cur);
+    }
     return map;
-  }, [activeIssues]);
+  }, [activeIssues, doneIssues]);
 
   if (!selectedCompanyId) {
     return <EmptyState icon={Target} message="Select a company to view goals." />;
@@ -83,7 +97,10 @@ export function Goals() {
             goalLink={(goal) => `/goals/${goal.id}`}
             trailingContent={(goal: Goal) => {
               const stats = goalStats.get(goal.id);
-              if (!stats || (stats.blocked + stats.review + stats.active) === 0) return null;
+              if (!stats) return null;
+              const total = stats.done + stats.blocked + stats.review + stats.active;
+              if (total === 0) return null;
+              const pct = total > 0 ? Math.round((stats.done / total) * 100) : 0;
               return (
                 <span className="flex items-center gap-1 mr-1">
                   {stats.blocked > 0 && (
@@ -99,6 +116,11 @@ export function Goals() {
                   {stats.active > 0 && (
                     <span className="text-[10px] text-muted-foreground">
                       {stats.active} active
+                    </span>
+                  )}
+                  {pct > 0 && (
+                    <span className="text-[10px] font-medium px-1 py-0.5 rounded" style={{ background: pct === 100 ? "rgba(34,197,94,0.1)" : "rgba(99,102,241,0.1)", color: pct === 100 ? "#22C55E" : "#6366F1" }}>
+                      {pct}%
                     </span>
                   )}
                 </span>
