@@ -1,8 +1,9 @@
-import { useEffect } from "react";
-import { useParams } from "@/lib/router";
+import { useEffect, useMemo } from "react";
+import { useParams, Link } from "@/lib/router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { goalsApi } from "../api/goals";
 import { projectsApi } from "../api/projects";
+import { issuesApi } from "../api/issues";
 import { assetsApi } from "../api/assets";
 import { usePanel } from "../context/PanelContext";
 import { useCompany } from "../context/CompanyContext";
@@ -12,6 +13,8 @@ import { queryKeys } from "../lib/queryKeys";
 import { GoalProperties } from "../components/GoalProperties";
 import { GoalTree } from "../components/GoalTree";
 import { StatusBadge } from "../components/StatusBadge";
+import { StatusIcon } from "../components/StatusIcon";
+import { PriorityIcon } from "../components/PriorityIcon";
 import { InlineEditor } from "../components/InlineEditor";
 import { EntityRow } from "../components/EntityRow";
 import { PageSkeleton } from "../components/PageSkeleton";
@@ -19,7 +22,7 @@ import { projectUrl } from "../lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
-import type { Goal, Project } from "@paperclipai/shared";
+import type { Goal, Issue, Project } from "@paperclipai/shared";
 
 export function GoalDetail() {
   const { goalId } = useParams<{ goalId: string }>();
@@ -83,6 +86,13 @@ export function GoalDetail() {
     }
   });
 
+  const { data: allIssues } = useQuery({
+    queryKey: queryKeys.issues.list(resolvedCompanyId!),
+    queryFn: () => issuesApi.list(resolvedCompanyId!),
+    enabled: !!resolvedCompanyId,
+    staleTime: 60_000,
+  });
+
   const childGoals = (allGoals ?? []).filter((g) => g.parentId === goalId);
   const linkedProjects = (allProjects ?? []).filter((p) => {
     if (!goalId) return false;
@@ -90,6 +100,22 @@ export function GoalDetail() {
     if (p.goals.some((goalRef) => goalRef.id === goalId)) return true;
     return p.goalId === goalId;
   });
+
+  const linkedProjectIds = useMemo(
+    () => new Set(linkedProjects.map((p) => p.id)),
+    [linkedProjects],
+  );
+
+  const goalIssues = useMemo(
+    () => (allIssues ?? []).filter(
+      (i: Issue) => (i.projectId && linkedProjectIds.has(i.projectId)) ||
+        (i as Issue & { goalId?: string }).goalId === goalId
+    ).sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+    [allIssues, linkedProjectIds, goalId],
+  );
+
+  const activeGoalIssues = goalIssues.filter((i) => !["done", "cancelled"].includes(i.status));
+  const doneGoalIssues = goalIssues.filter((i) => i.status === "done");
 
   useEffect(() => {
     setBreadcrumbs([
@@ -153,6 +179,9 @@ export function GoalDetail() {
           <TabsTrigger value="projects">
             Projects ({linkedProjects.length})
           </TabsTrigger>
+          <TabsTrigger value="issues">
+            Issues {goalIssues.length > 0 && `(${goalIssues.length})`}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="children" className="mt-4 space-y-3">
@@ -188,6 +217,53 @@ export function GoalDetail() {
                 />
               ))}
             </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="issues" className="mt-4 space-y-4">
+          {goalIssues.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No issues linked to this goal.</p>
+          ) : (
+            <>
+              {activeGoalIssues.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Active ({activeGoalIssues.length})</p>
+                  <div className="border border-border rounded-lg divide-y divide-border">
+                    {activeGoalIssues.slice(0, 20).map((issue) => (
+                      <Link
+                        key={issue.id}
+                        to={`/issues/${issue.identifier ?? issue.id}`}
+                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent/20 transition-colors no-underline text-inherit"
+                      >
+                        <StatusIcon status={issue.status} />
+                        <PriorityIcon priority={issue.priority} />
+                        <span className="font-mono text-xs text-muted-foreground shrink-0">{issue.identifier ?? issue.id.slice(0, 8)}</span>
+                        <span className="truncate flex-1">{issue.title}</span>
+                        <StatusBadge status={issue.status} />
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {doneGoalIssues.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Done ({doneGoalIssues.length})</p>
+                  <div className="border border-border rounded-lg divide-y divide-border">
+                    {doneGoalIssues.slice(0, 10).map((issue) => (
+                      <Link
+                        key={issue.id}
+                        to={`/issues/${issue.identifier ?? issue.id}`}
+                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent/20 transition-colors no-underline text-inherit opacity-60"
+                      >
+                        <StatusIcon status={issue.status} />
+                        <span className="font-mono text-xs text-muted-foreground shrink-0">{issue.identifier ?? issue.id.slice(0, 8)}</span>
+                        <span className="truncate flex-1">{issue.title}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
       </Tabs>
