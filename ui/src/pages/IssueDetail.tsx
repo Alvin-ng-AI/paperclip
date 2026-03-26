@@ -715,6 +715,44 @@ export function IssueDetail() {
         </div>
       )}
 
+      {issue.status === "in_review" && (() => {
+        const lastComment = comments && comments.length > 0
+          ? [...comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+          : null;
+        const snippet = lastComment?.body
+          ?.replace(/^#{1,6}\s+/gm, "")
+          .replace(/\*\*([^*]+)\*\*/g, "$1")
+          .replace(/`[^`]+`/g, "")
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+          .replace(/\n{2,}/g, " · ")
+          .replace(/\n/g, " ")
+          .trim()
+          .slice(0, 280);
+        return (
+          <div className="rounded-md border border-green-500/30 bg-green-500/5 px-3 py-2.5 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-green-600 dark:text-green-400">
+                <Check className="h-3.5 w-3.5 shrink-0" />
+                Ready for review — agent submitted this for approval
+              </div>
+              <Button
+                size="sm"
+                className="h-6 px-2.5 text-xs bg-green-700 hover:bg-green-600 text-white shrink-0"
+                disabled={updateIssue.isPending}
+                onClick={() => updateIssue.mutate({ status: "done" })}
+              >
+                Approve
+              </Button>
+            </div>
+            {snippet && (
+              <p className="text-xs text-foreground/70 leading-relaxed line-clamp-3 whitespace-pre-line">
+                {snippet}{lastComment!.body!.length > 280 ? "…" : ""}
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
       {issue.status === "blocked" && (() => {
         const lastComment = comments && comments.length > 0
           ? [...comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
