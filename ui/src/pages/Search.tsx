@@ -17,6 +17,35 @@ import { PageSkeleton } from "../components/PageSkeleton";
 import { Search as SearchIcon, CircleDot } from "lucide-react";
 import type { Issue } from "@paperclipai/shared";
 
+function LastAgentComment({ issueId }: { issueId: string }) {
+  const { data: comments } = useQuery({
+    queryKey: ["issue-last-comment", issueId],
+    queryFn: () => issuesApi.listComments(issueId),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  const last = comments?.length
+    ? [...comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+    : null;
+  if (!last?.body) return null;
+  const preview = last.body
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/`[^`]+`/g, "")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/\n{2,}/g, " · ")
+    .replace(/\n/g, " ")
+    .trim()
+    .slice(0, 180);
+  if (!preview) return null;
+  return (
+    <div className="mt-1.5 rounded px-2 py-1.5 border-l-2 border-primary/30 bg-primary/5">
+      <div className="text-[9px] uppercase tracking-wider mb-0.5 font-semibold text-primary/70">Agent output</div>
+      <p className="text-xs text-muted-foreground line-clamp-2">{preview}</p>
+    </div>
+  );
+}
+
 const STATUSES = [
   { value: "todo", label: "To Do" },
   { value: "in_progress", label: "In Progress" },
@@ -79,6 +108,7 @@ function SearchResultCard({ issue, agentName, query }: SearchResultCardProps) {
           {snippet && (
             <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{snippet}</p>
           )}
+          <LastAgentComment issueId={issue.id} />
           <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
             {agentName && <span>{agentName}</span>}
             <span>{timeAgo(issue.updatedAt)}</span>
