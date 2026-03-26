@@ -975,8 +975,8 @@ export function IssueDetail() {
                 className="bg-amber-600 hover:bg-amber-500 text-white"
                 disabled={!unblockText.trim() || addComment.isPending}
                 onClick={() => {
-                  addComment.mutate(
-                    { body: unblockText, reopen: true },
+                  updateIssue.mutate(
+                    { status: "in_progress", comment: `✅ Resolved by Alvin: ${unblockText}` },
                     { onSuccess: () => { setUnblockOpen(false); setUnblockText(""); } },
                   );
                 }}
