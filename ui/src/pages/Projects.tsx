@@ -94,6 +94,12 @@ export function Projects() {
                 title={project.name}
                 subtitle={project.description ?? undefined}
                 to={projectUrl(project)}
+                leading={
+                  <span
+                    className="h-2.5 w-2.5 rounded-sm shrink-0"
+                    style={{ background: project.color ?? "#6366F1" }}
+                  />
+                }
                 trailing={
                   <div className="flex items-center gap-3">
                     {stats && (stats.blocked + stats.review + stats.active) > 0 && (
