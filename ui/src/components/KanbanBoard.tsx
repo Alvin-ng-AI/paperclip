@@ -17,17 +17,16 @@ import {
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { StatusIcon } from "./StatusIcon";
 import { PriorityIcon } from "./PriorityIcon";
 import { Identity } from "./Identity";
 import type { Issue } from "@paperclipai/shared";
 
-const BOARD_COLUMNS: { status: string; label: string }[] = [
-  { status: "todo", label: "To Do" },
-  { status: "in_progress", label: "In Progress" },
-  { status: "in_review", label: "Pending Review" },
-  { status: "blocked", label: "Blocked" },
-  { status: "done", label: "Done" },
+const BOARD_COLUMNS: { status: string; label: string; emoji: string; color: string; dotColor: string }[] = [
+  { status: "todo",        label: "To Do",          emoji: "📋", color: "text-muted-foreground",    dotColor: "#6B7280" },
+  { status: "in_progress", label: "In Progress",    emoji: "🔄", color: "text-yellow-500",           dotColor: "#EAB308" },
+  { status: "in_review",  label: "Pending Review",  emoji: "🔵", color: "text-blue-500",             dotColor: "#3B82F6" },
+  { status: "done",        label: "Done",           emoji: "🟢", color: "text-green-500",            dotColor: "#22C55E" },
+  { status: "blocked",     label: "Blocked",        emoji: "🔴", color: "text-red-500",              dotColor: "#EF4444" },
 ];
 
 const boardStatuses = BOARD_COLUMNS.map((col) => col.status);
@@ -63,12 +62,13 @@ function KanbanColumn({
   liveIssueIds?: Set<string>;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
+  const colConfig = BOARD_COLUMNS.find((c) => c.status === status);
 
   return (
     <div className="flex flex-col min-w-[260px] w-[260px] shrink-0">
       <div className="flex items-center gap-2 px-2 py-2 mb-1">
-        <StatusIcon status={status} />
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <span className="text-sm leading-none">{colConfig?.emoji ?? "•"}</span>
+        <span className={`text-xs font-semibold uppercase tracking-wide ${colConfig?.color ?? "text-muted-foreground"}`}>
           {statusLabel(status)}
         </span>
         <span className="text-xs text-muted-foreground/60 ml-auto tabular-nums">
