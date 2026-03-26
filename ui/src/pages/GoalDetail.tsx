@@ -115,6 +115,11 @@ export function GoalDetail() {
     [linkedProjects],
   );
 
+  const projectById = useMemo(
+    () => new Map((allProjects ?? []).map((p: Project) => [p.id, p])),
+    [allProjects],
+  );
+
   const goalIssues = useMemo(
     () => (allIssues ?? []).filter(
       (i: Issue) => (i.projectId && linkedProjectIds.has(i.projectId)) ||
@@ -292,6 +297,17 @@ export function GoalDetail() {
                         <PriorityIcon priority={issue.priority} />
                         <span className="font-mono text-xs text-muted-foreground shrink-0">{issue.identifier ?? issue.id.slice(0, 8)}</span>
                         <span className="truncate flex-1">{issue.title}</span>
+                        {issue.projectId && projectById.get(issue.projectId) && (() => {
+                          const proj = projectById.get(issue.projectId!)!;
+                          return (
+                            <span
+                              className="hidden shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full sm:inline"
+                              style={{ background: `${proj.color ?? "#6366F1"}20`, color: proj.color ?? "#6366F1" }}
+                            >
+                              {proj.name}
+                            </span>
+                          );
+                        })()}
                         {issue.status === "in_review" ? (
                           <button
                             className="hidden shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors hover:bg-green-500/20 md:flex"
@@ -326,6 +342,17 @@ export function GoalDetail() {
                         <StatusIcon status={issue.status} />
                         <span className="font-mono text-xs text-muted-foreground shrink-0">{issue.identifier ?? issue.id.slice(0, 8)}</span>
                         <span className="truncate flex-1">{issue.title}</span>
+                        {issue.projectId && projectById.get(issue.projectId) && (() => {
+                          const proj = projectById.get(issue.projectId!)!;
+                          return (
+                            <span
+                              className="hidden shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full sm:inline"
+                              style={{ background: `${proj.color ?? "#6366F1"}20`, color: proj.color ?? "#6366F1" }}
+                            >
+                              {proj.name}
+                            </span>
+                          );
+                        })()}
                       </Link>
                     ))}
                   </div>
