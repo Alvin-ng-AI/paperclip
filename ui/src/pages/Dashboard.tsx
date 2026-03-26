@@ -633,7 +633,9 @@ export function Dashboard() {
                   </div>
                 ) : (
                   <div className="text-[11px] truncate" style={{ color: "#6B7280" }}>
-                    {agent.title ?? roleLabel}
+                    {agent.lastHeartbeatAt
+                      ? `last active ${timeAgo(String(agent.lastHeartbeatAt))}`
+                      : (agent.title ?? roleLabel)}
                   </div>
                 )}
               </div>
