@@ -180,6 +180,40 @@ export function GoalDetail() {
         />
       </div>
 
+      {goalIssues.length > 0 && (() => {
+        const blocked = activeGoalIssues.filter(i => i.status === "blocked").length;
+        const review = activeGoalIssues.filter(i => i.status === "in_review").length;
+        const active = activeGoalIssues.filter(i => i.status !== "blocked" && i.status !== "in_review").length;
+        const done = doneGoalIssues.length;
+        const total = done + activeGoalIssues.length;
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        return (
+          <div className="space-y-3 rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Progress</span>
+              <span className="text-sm font-semibold tabular-nums" style={{ color: pct === 100 ? "#22C55E" : "inherit" }}>
+                {pct}% — {done}/{total} done
+              </span>
+            </div>
+            <div className="h-2 rounded-full overflow-hidden bg-muted">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${pct}%`,
+                  background: pct === 100 ? "#22C55E" : blocked > 0 ? "#EF4444" : "#6366F1",
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              {blocked > 0 && <span className="font-medium text-red-500">🔴 {blocked} blocked</span>}
+              {review > 0 && <span className="font-medium text-amber-500">🔔 {review} review</span>}
+              {active > 0 && <span>🟡 {active} active</span>}
+              {done > 0 && <span className="text-green-600">✅ {done} done</span>}
+            </div>
+          </div>
+        );
+      })()}
+
       <Tabs defaultValue="children">
         <TabsList>
           <TabsTrigger value="children">
