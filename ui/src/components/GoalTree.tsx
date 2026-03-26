@@ -3,12 +3,13 @@ import { Link } from "@/lib/router";
 import { StatusBadge } from "./StatusBadge";
 import { ChevronRight } from "lucide-react";
 import { cn } from "../lib/utils";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 interface GoalTreeProps {
   goals: Goal[];
   goalLink?: (goal: Goal) => string;
   onSelect?: (goal: Goal) => void;
+  trailingContent?: (goal: Goal) => ReactNode;
 }
 
 interface GoalNodeProps {
@@ -18,9 +19,10 @@ interface GoalNodeProps {
   depth: number;
   goalLink?: (goal: Goal) => string;
   onSelect?: (goal: Goal) => void;
+  trailingContent?: (goal: Goal) => ReactNode;
 }
 
-function GoalNode({ goal, children, allGoals, depth, goalLink, onSelect }: GoalNodeProps) {
+function GoalNode({ goal, children, allGoals, depth, goalLink, onSelect, trailingContent }: GoalNodeProps) {
   const [expanded, setExpanded] = useState(true);
   const hasChildren = children.length > 0;
   const link = goalLink?.(goal);
@@ -45,6 +47,7 @@ function GoalNode({ goal, children, allGoals, depth, goalLink, onSelect }: GoalN
       )}
       <span className="text-xs text-muted-foreground capitalize">{goal.level}</span>
       <span className="flex-1 truncate">{goal.title}</span>
+      {trailingContent?.(goal)}
       <StatusBadge status={goal.status} />
     </>
   );
@@ -83,6 +86,7 @@ function GoalNode({ goal, children, allGoals, depth, goalLink, onSelect }: GoalN
               depth={depth + 1}
               goalLink={goalLink}
               onSelect={onSelect}
+              trailingContent={trailingContent}
             />
           ))}
         </div>
@@ -91,7 +95,7 @@ function GoalNode({ goal, children, allGoals, depth, goalLink, onSelect }: GoalN
   );
 }
 
-export function GoalTree({ goals, goalLink, onSelect }: GoalTreeProps) {
+export function GoalTree({ goals, goalLink, onSelect, trailingContent }: GoalTreeProps) {
   const goalIds = new Set(goals.map((g) => g.id));
   const roots = goals.filter((g) => !g.parentId || !goalIds.has(g.parentId));
 
@@ -110,6 +114,7 @@ export function GoalTree({ goals, goalLink, onSelect }: GoalTreeProps) {
           depth={0}
           goalLink={goalLink}
           onSelect={onSelect}
+          trailingContent={trailingContent}
         />
       ))}
     </div>
