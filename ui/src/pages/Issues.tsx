@@ -104,8 +104,11 @@ export function Issues() {
     return <EmptyState icon={CircleDot} message="Select a company to view issues." />;
   }
 
+  const urlFilterKey = [searchParams.get("status") ?? "", searchParams.get("assignee") ?? ""].join("|");
+
   return (
     <IssuesList
+      key={urlFilterKey || undefined}
       issues={issues ?? []}
       isLoading={isLoading}
       error={error as Error | null}
