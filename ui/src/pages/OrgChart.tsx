@@ -227,6 +227,18 @@ const adapterLabels: Record<string, string> = {
   http: "HTTP",
 };
 
+function orgModelChip(rawModel: string | undefined): { label: string; color: string } | null {
+  if (!rawModel || rawModel === "default") return null;
+  if (rawModel.includes("haiku")) return { label: "Haiku", color: "#22C55E" };
+  if (rawModel.includes("sonnet")) return { label: "Sonnet", color: "#818CF8" };
+  if (rawModel.includes("opus")) return { label: "Opus", color: "#F59E0B" };
+  if (rawModel.includes("flash")) return { label: "Flash", color: "#22C55E" };
+  if (rawModel.includes("gemini")) return { label: "Gemini", color: "#34D399" };
+  if (rawModel.includes("gpt-4o-mini")) return { label: "4o-mini", color: "#22C55E" };
+  if (rawModel.includes("gpt-4o")) return { label: "4o", color: "#818CF8" };
+  return null;
+}
+
 const statusDotColor: Record<string, string> = {
   running: "#22d3ee",
   active: "#4ade80",
@@ -575,11 +587,19 @@ export function OrgChart() {
                   <span className="text-[11px] text-muted-foreground leading-tight mt-0.5">
                     {agent?.title ?? roleLabel(node.role)}
                   </span>
-                  {agent && (
-                    <span className="text-[10px] text-muted-foreground/60 font-mono leading-tight mt-1">
-                      {adapterLabels[agent.adapterType] ?? agent.adapterType}
-                    </span>
-                  )}
+                  {agent && (() => {
+                    const chip = orgModelChip(agent.adapterConfig?.model as string | undefined);
+                    return chip ? (
+                      <span className="text-[9px] font-medium px-1 py-0.5 rounded font-mono leading-tight mt-1"
+                        style={{ background: `${chip.color}20`, color: chip.color }}>
+                        {chip.label}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/60 font-mono leading-tight mt-1">
+                        {adapterLabels[agent.adapterType] ?? agent.adapterType}
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
