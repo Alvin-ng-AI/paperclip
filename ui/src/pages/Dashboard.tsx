@@ -579,13 +579,15 @@ export function Dashboard() {
                 )}
               </div>
               {reviewCount > 0 && (
-                <div
-                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                <Link
+                  to={`/issues?assignee=${agent.id}&status=in_review`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="no-underline text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 hover:opacity-80 transition-opacity"
                   style={{ background: "rgba(251,191,36,0.15)", color: "#FBB724" }}
-                  title={`${reviewCount} awaiting approval`}
+                  title={`${reviewCount} awaiting approval — click to view`}
                 >
                   {reviewCount} review
-                </div>
+                </Link>
               )}
               {(agent.spentMonthlyCents ?? 0) > 0 && (
                 <div className="text-[10px] flex-shrink-0" style={{ color: "#4B5563" }}>
