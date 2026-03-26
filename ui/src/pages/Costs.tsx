@@ -312,8 +312,10 @@ export function Costs() {
     return map;
   }, [agentsList]);
   const modelMutation = useMutation({
-    mutationFn: ({ agentId, model }: { agentId: string; model: string }) =>
-      agentsApi.update(agentId, { adapterConfig: { model } }, companyId),
+    mutationFn: ({ agentId, model }: { agentId: string; model: string }) => {
+      const existing = agentsMap.get(agentId)?.adapterConfig ?? {};
+      return agentsApi.update(agentId, { adapterConfig: { ...existing, model } }, companyId);
+    },
     onSuccess: () => { void refetchAgents(); },
   });
 

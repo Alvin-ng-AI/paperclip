@@ -716,7 +716,15 @@ export function IssueDetail() {
         const lastComment = comments && comments.length > 0
           ? [...comments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
           : null;
-        const snippet = lastComment?.body?.slice(0, 280);
+        const snippet = lastComment?.body
+          ?.replace(/^#{1,6}\s+/gm, "")
+          .replace(/\*\*([^*]+)\*\*/g, "$1")
+          .replace(/`[^`]+`/g, "")
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+          .replace(/\n{2,}/g, " · ")
+          .replace(/\n/g, " ")
+          .trim()
+          .slice(0, 280);
         return (
           <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2.5 space-y-1">
             <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
