@@ -643,9 +643,15 @@ export function Dashboard() {
                 </Link>
               )}
               {modelChip && (
-                <div className="text-[10px] font-semibold flex-shrink-0" style={{ color: modelChip.color }}>
+                <Link
+                  to={`${agentUrl(agent)}/configuration`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="no-underline text-[10px] font-semibold flex-shrink-0 hover:opacity-70 transition-opacity"
+                  style={{ color: modelChip.color }}
+                  title="Change model"
+                >
                   {modelChip.label}
-                </div>
+                </Link>
               )}
               {(agent.spentMonthlyCents ?? 0) > 0 && (
                 <div className="text-[10px] flex-shrink-0" style={{ color: "#4B5563" }}>
