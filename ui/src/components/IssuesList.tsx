@@ -64,6 +64,7 @@ const defaultViewState: IssueViewState = {
 const quickFilterPresets = [
   { label: "All", statuses: [] as string[] },
   { label: "Active", statuses: ["todo", "in_progress", "in_review", "blocked"] },
+  { label: "Review", statuses: ["in_review"] },
   { label: "Blocked", statuses: ["blocked"] },
   { label: "Backlog", statuses: ["backlog"] },
   { label: "Done", statuses: ["done", "cancelled"] },

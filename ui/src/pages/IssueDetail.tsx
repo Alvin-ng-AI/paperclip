@@ -1260,6 +1260,7 @@ export function IssueDetail() {
                 parentId: issue.id,
                 goalId: issue.goalId ?? undefined,
                 projectId: issue.projectId ?? undefined,
+                assigneeAgentId: issue.assigneeAgentId ?? undefined,
               })}
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
