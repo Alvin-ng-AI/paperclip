@@ -20,7 +20,7 @@ import { BudgetPolicyCard } from "../components/BudgetPolicyCard";
 import { IssuesList } from "../components/IssuesList";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { PageTabBar } from "../components/PageTabBar";
-import { projectRouteRef, cn } from "../lib/utils";
+import { projectRouteRef, cn, formatDate } from "../lib/utils";
 import { timeAgo } from "../lib/timeAgo";
 import { Link } from "@/lib/router";
 import { Tabs } from "@/components/ui/tabs";
@@ -162,7 +162,7 @@ function OverviewContent({
         {project.targetDate && (
           <div>
             <span className="text-muted-foreground">Target Date</span>
-            <p>{project.targetDate}</p>
+            <p>{formatDate(project.targetDate)}</p>
           </div>
         )}
       </div>

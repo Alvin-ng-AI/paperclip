@@ -674,16 +674,18 @@ export function IssuesList({
           </button>
           {projects.map((project) => {
             const isActive = viewState.projects.length === 1 && viewState.projects[0] === project.id;
+            const c = project.color ?? "#6366F1";
             return (
               <button
                 key={project.id}
-                className={`shrink-0 px-3 py-1 text-xs rounded-full border transition-colors whitespace-nowrap ${
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1 text-xs rounded-full border transition-colors whitespace-nowrap ${
                   isActive
                     ? "bg-primary text-primary-foreground border-primary"
                     : "border-border text-muted-foreground hover:text-foreground hover:border-foreground/30"
                 }`}
                 onClick={() => updateView({ projects: isActive ? [] : [project.id] })}
               >
+                <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: isActive ? "currentColor" : c }} />
                 {project.name}
               </button>
             );
