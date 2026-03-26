@@ -27,7 +27,7 @@ import type { Goal, Issue, Project } from "@paperclipai/shared";
 export function GoalDetail() {
   const { goalId } = useParams<{ goalId: string }>();
   const { selectedCompanyId, setSelectedCompanyId } = useCompany();
-  const { openNewGoal } = useDialog();
+  const { openNewGoal, openNewIssue } = useDialog();
   const { openPanel, closePanel } = usePanel();
   const { setBreadcrumbs } = useBreadcrumbs();
   const queryClient = useQueryClient();
@@ -230,6 +230,16 @@ export function GoalDetail() {
         </TabsContent>
 
         <TabsContent value="issues" className="mt-4 space-y-4">
+          <div className="flex items-center justify-start">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openNewIssue({ goalId: goalId ?? undefined })}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              New Issue
+            </Button>
+          </div>
           {goalIssues.length === 0 ? (
             <p className="text-sm text-muted-foreground">No issues linked to this goal.</p>
           ) : (
