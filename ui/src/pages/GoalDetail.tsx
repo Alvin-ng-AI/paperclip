@@ -21,7 +21,7 @@ import { PageSkeleton } from "../components/PageSkeleton";
 import { projectUrl } from "../lib/utils";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import type { Goal, Issue, Project } from "@paperclipai/shared";
 
 export function GoalDetail() {
@@ -91,6 +91,15 @@ export function GoalDetail() {
     queryFn: () => issuesApi.list(resolvedCompanyId!),
     enabled: !!resolvedCompanyId,
     staleTime: 60_000,
+  });
+
+  const approveIssue = useMutation({
+    mutationFn: (issueId: string) => issuesApi.update(issueId, { status: "done" }),
+    onSuccess: () => {
+      if (resolvedCompanyId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.issues.list(resolvedCompanyId) });
+      }
+    },
   });
 
   const childGoals = (allGoals ?? []).filter((g) => g.parentId === goalId);
@@ -239,7 +248,22 @@ export function GoalDetail() {
                         <PriorityIcon priority={issue.priority} />
                         <span className="font-mono text-xs text-muted-foreground shrink-0">{issue.identifier ?? issue.id.slice(0, 8)}</span>
                         <span className="truncate flex-1">{issue.title}</span>
-                        <StatusBadge status={issue.status} />
+                        {issue.status === "in_review" ? (
+                          <button
+                            className="hidden shrink-0 items-center gap-1 rounded-md px-2 py-1 text-xs font-semibold transition-colors hover:bg-green-500/20 md:flex"
+                            style={{ color: "#22C55E", border: "1px solid rgba(34,197,94,0.3)" }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              approveIssue.mutate(issue.id);
+                            }}
+                          >
+                            <Check className="h-3 w-3" />
+                            Approve
+                          </button>
+                        ) : (
+                          <StatusBadge status={issue.status} />
+                        )}
                       </Link>
                     ))}
                   </div>
