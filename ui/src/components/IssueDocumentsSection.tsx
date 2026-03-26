@@ -463,13 +463,17 @@ export function IssueDocumentsSection({
       || (documentKey === "plan" && Boolean(issue.legacyPlanDocument));
     if (!targetExists || hasScrolledToHashRef.current) return;
     setFoldedDocumentKeys((current) => current.filter((key) => key !== documentKey));
-    const element = document.getElementById(`document-${documentKey}`);
-    if (!element) return;
-    hasScrolledToHashRef.current = true;
-    setHighlightDocumentKey(documentKey);
-    element.scrollIntoView({ behavior: "smooth", block: "center" });
-    const timer = setTimeout(() => setHighlightDocumentKey((current) => current === documentKey ? null : current), 3000);
-    return () => clearTimeout(timer);
+    // Defer getElementById one frame so the unfold state change re-renders first
+    const rafId = requestAnimationFrame(() => {
+      const element = document.getElementById(`document-${documentKey}`);
+      if (!element) return;
+      hasScrolledToHashRef.current = true;
+      setHighlightDocumentKey(documentKey);
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      const timer = setTimeout(() => setHighlightDocumentKey((current) => current === documentKey ? null : current), 3000);
+      return () => clearTimeout(timer);
+    });
+    return () => cancelAnimationFrame(rafId);
   }, [issue.legacyPlanDocument, location.hash, sortedDocuments]);
 
   useEffect(() => {

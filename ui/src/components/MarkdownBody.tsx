@@ -4,6 +4,7 @@ import remarkGfm from "remark-gfm";
 import { parseProjectMentionHref } from "@paperclipai/shared";
 import { cn } from "../lib/utils";
 import { useTheme } from "../context/ThemeContext";
+import { Link } from "@/lib/router";
 
 interface MarkdownBodyProps {
   children: string;
@@ -138,8 +139,18 @@ export function MarkdownBody({ children, className, resolveImageSrc }: MarkdownB
           </a>
         );
       }
+      // Route internal links (relative paths or same-origin) through React Router
+      // so #document-* hashes update router location and trigger scroll effects
+      const isInternal = href && (href.startsWith("/") || href.startsWith("#"));
+      if (isInternal) {
+        return (
+          <Link to={href}>
+            {linkChildren}
+          </Link>
+        );
+      }
       return (
-        <a href={href} rel="noreferrer">
+        <a href={href} target="_blank" rel="noreferrer">
           {linkChildren}
         </a>
       );
