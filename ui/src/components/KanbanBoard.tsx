@@ -41,9 +41,16 @@ interface Agent {
   name: string;
 }
 
+interface ProjectChip {
+  id: string;
+  name: string;
+  color?: string | null;
+}
+
 interface KanbanBoardProps {
   issues: Issue[];
   agents?: Agent[];
+  projects?: ProjectChip[];
   liveIssueIds?: Set<string>;
   onUpdateIssue: (id: string, data: Record<string, unknown>) => void;
 }
@@ -54,11 +61,13 @@ function KanbanColumn({
   status,
   issues,
   agents,
+  projects,
   liveIssueIds,
 }: {
   status: string;
   issues: Issue[];
   agents?: Agent[];
+  projects?: ProjectChip[];
   liveIssueIds?: Set<string>;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
@@ -90,6 +99,7 @@ function KanbanColumn({
               key={issue.id}
               issue={issue}
               agents={agents}
+              projects={projects}
               isLive={liveIssueIds?.has(issue.id)}
             />
           ))}
@@ -104,11 +114,13 @@ function KanbanColumn({
 function KanbanCard({
   issue,
   agents,
+  projects,
   isLive,
   isOverlay,
 }: {
   issue: Issue;
   agents?: Agent[];
+  projects?: ProjectChip[];
   isLive?: boolean;
   isOverlay?: boolean;
 }) {
@@ -130,6 +142,8 @@ function KanbanCard({
     if (!id || !agents) return null;
     return agents.find((a) => a.id === id)?.name ?? null;
   };
+
+  const project = issue.projectId && projects ? projects.find((p) => p.id === issue.projectId) : null;
 
   return (
     <div
@@ -173,6 +187,18 @@ function KanbanCard({
               </span>
             );
           })()}
+          {project && (
+            <span
+              className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground truncate max-w-[90px]"
+              title={project.name}
+            >
+              <span
+                className="h-1.5 w-1.5 rounded-full shrink-0"
+                style={{ background: project.color ?? "#6366F1" }}
+              />
+              <span className="truncate">{project.name}</span>
+            </span>
+          )}
         </div>
       </Link>
     </div>
@@ -184,6 +210,7 @@ function KanbanCard({
 export function KanbanBoard({
   issues,
   agents,
+  projects,
   liveIssueIds,
   onUpdateIssue,
 }: KanbanBoardProps) {
@@ -261,13 +288,14 @@ export function KanbanBoard({
             status={status}
             issues={columnIssues[status] ?? []}
             agents={agents}
+            projects={projects}
             liveIssueIds={liveIssueIds}
           />
         ))}
       </div>
       <DragOverlay>
         {activeIssue ? (
-          <KanbanCard issue={activeIssue} agents={agents} isOverlay />
+          <KanbanCard issue={activeIssue} agents={agents} projects={projects} isOverlay />
         ) : null}
       </DragOverlay>
     </DndContext>

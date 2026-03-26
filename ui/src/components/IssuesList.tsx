@@ -695,6 +695,7 @@ export function IssuesList({
         <KanbanBoard
           issues={filtered}
           agents={agents}
+          projects={projects}
           liveIssueIds={liveIssueIds}
           onUpdateIssue={onUpdateIssue}
         />
