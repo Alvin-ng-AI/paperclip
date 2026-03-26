@@ -583,6 +583,18 @@ export function Dashboard() {
           const roleLabel = AGENT_ROLE_LABELS[agent.role] ?? agent.role;
           const currentTask = agentTaskMap.get(agent.id);
           const reviewCount = agentReviewCountMap.get(agent.id) ?? 0;
+          const rawModel = agent.adapterConfig?.model as string | undefined;
+          const modelChip = (() => {
+            if (!rawModel || rawModel === "default") return null;
+            if (rawModel.includes("haiku")) return { label: "Haiku", color: "#22C55E" };
+            if (rawModel.includes("sonnet")) return { label: "Sonnet", color: "#818CF8" };
+            if (rawModel.includes("opus")) return { label: "Opus", color: "#F59E0B" };
+            if (rawModel.includes("gemini-flash") || rawModel.includes("flash")) return { label: "Flash", color: "#22C55E" };
+            if (rawModel.includes("gemini-pro") || rawModel.includes("gemini")) return { label: "Gemini", color: "#34D399" };
+            if (rawModel.includes("gpt-4o-mini")) return { label: "4o-mini", color: "#22C55E" };
+            if (rawModel.includes("gpt-4o")) return { label: "4o", color: "#818CF8" };
+            return null;
+          })();
           return (
             <Link
               key={agent.id}
@@ -615,6 +627,11 @@ export function Dashboard() {
                 >
                   {reviewCount} review
                 </Link>
+              )}
+              {modelChip && (
+                <div className="text-[10px] font-semibold flex-shrink-0" style={{ color: modelChip.color }}>
+                  {modelChip.label}
+                </div>
               )}
               {(agent.spentMonthlyCents ?? 0) > 0 && (
                 <div className="text-[10px] flex-shrink-0" style={{ color: "#4B5563" }}>
