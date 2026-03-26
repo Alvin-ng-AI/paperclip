@@ -816,7 +816,30 @@ export function AgentDetail() {
             </button>
           </AgentIconPicker>
           <div className="min-w-0">
-            <h2 className="text-2xl font-bold truncate">{agent.name}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-2xl font-bold truncate">{agent.name}</h2>
+              {(() => {
+                const raw = agent.adapterConfig?.model as string | undefined;
+                if (!raw || raw === "default") return null;
+                let label = raw, color = "#818CF8";
+                if (raw.includes("haiku")) { label = "Haiku"; color = "#22C55E"; }
+                else if (raw.includes("sonnet")) { label = "Sonnet"; color = "#818CF8"; }
+                else if (raw.includes("opus")) { label = "Opus"; color = "#F59E0B"; }
+                else if (raw.includes("flash")) { label = "Flash"; color = "#22C55E"; }
+                else if (raw.includes("gemini")) { label = "Gemini"; color = "#34D399"; }
+                else if (raw.includes("gpt-4o-mini")) { label = "4o-mini"; color = "#22C55E"; }
+                else if (raw.includes("gpt-4o")) { label = "4o"; color = "#818CF8"; }
+                else return null;
+                return (
+                  <span
+                    className="text-[11px] font-medium px-1.5 py-0.5 rounded font-mono"
+                    style={{ background: `${color}20`, color }}
+                  >
+                    {label}
+                  </span>
+                );
+              })()}
+            </div>
             <p className="text-sm text-muted-foreground truncate">
               {roleLabels[agent.role] ?? agent.role}
               {agent.title ? ` - ${agent.title}` : ""}
