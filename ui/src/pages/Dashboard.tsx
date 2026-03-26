@@ -249,17 +249,23 @@ export function Dashboard() {
   );
 
   const goalStatusMap = useMemo(() => {
-    const m = new Map<string, { active: number; blocked: number; review: number }>();
+    const m = new Map<string, { active: number; blocked: number; review: number; done: number }>();
     for (const issue of [...(inProgressIssues ?? []), ...(blockedIssues ?? []), ...(reviewIssues ?? [])]) {
       if (!issue.goalId) continue;
-      const cur = m.get(issue.goalId) ?? { active: 0, blocked: 0, review: 0 };
+      const cur = m.get(issue.goalId) ?? { active: 0, blocked: 0, review: 0, done: 0 };
       if (issue.status === "blocked") cur.blocked++;
       else if (issue.status === "in_review") cur.review++;
       else cur.active++;
       m.set(issue.goalId, cur);
     }
+    for (const issue of (doneIssues ?? [])) {
+      if (!issue.goalId) continue;
+      const cur = m.get(issue.goalId) ?? { active: 0, blocked: 0, review: 0, done: 0 };
+      cur.done++;
+      m.set(issue.goalId, cur);
+    }
     return m;
-  }, [inProgressIssues, blockedIssues, reviewIssues]);
+  }, [inProgressIssues, blockedIssues, reviewIssues, doneIssues]);
 
   const activeGoals = useMemo(
     () => (goals ?? []).filter((g: Goal) => g.status === "active"),
@@ -1176,37 +1182,57 @@ export function Dashboard() {
           </div>
           <div className="px-4 flex flex-col gap-1.5 pb-2">
             {activeGoals.map((goal: Goal) => {
-              const counts = goalStatusMap.get(goal.id) ?? { active: 0, blocked: 0, review: 0 };
-              const total = counts.active + counts.blocked + counts.review;
+              const counts = goalStatusMap.get(goal.id) ?? { active: 0, blocked: 0, review: 0, done: 0 };
+              const liveTotal = counts.active + counts.blocked + counts.review;
+              const grandTotal = liveTotal + counts.done;
+              const pct = grandTotal > 0 ? Math.round((counts.done / grandTotal) * 100) : 0;
               return (
                 <Link
                   key={goal.id}
                   to={`/goals/${goal.id}`}
-                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 no-underline text-inherit transition-colors hover:bg-white/[0.03]"
+                  className="flex flex-col gap-1.5 rounded-xl px-3 py-2.5 no-underline text-inherit transition-colors hover:bg-white/[0.03]"
                   style={{
                     background: "#0D1220",
                     border: "1px solid rgba(255,255,255,0.06)",
                   }}
                 >
-                  <span
-                    className="h-2.5 w-2.5 rounded-full flex-shrink-0"
-                    style={{ background: "#6366F1" }}
-                  />
-                  <span className="flex-1 text-[13px] font-medium truncate">{goal.title}</span>
-                  {total === 0 ? (
-                    <span className="text-[11px]" style={{ color: "#374151" }}>No active tasks</span>
-                  ) : (
-                    <span className="flex items-center gap-2 text-[11px]">
-                      {counts.blocked > 0 && (
-                        <span style={{ color: "#EF4444" }}>🔴 {counts.blocked}</span>
-                      )}
-                      {counts.review > 0 && (
-                        <span style={{ color: "#FBB724" }}>🔔 {counts.review}</span>
-                      )}
-                      {counts.active > 0 && (
-                        <span style={{ color: "#818CF8" }}>🟡 {counts.active}</span>
-                      )}
-                    </span>
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                      style={{ background: "#6366F1" }}
+                    />
+                    <span className="flex-1 text-[13px] font-medium truncate">{goal.title}</span>
+                    {grandTotal > 0 && (
+                      <span className="text-[10px] flex-shrink-0 font-semibold tabular-nums" style={{ color: pct === 100 ? "#22C55E" : "#6B7280" }}>
+                        {pct}%
+                      </span>
+                    )}
+                    {liveTotal === 0 && grandTotal === 0 ? (
+                      <span className="text-[11px]" style={{ color: "#374151" }}>No tasks</span>
+                    ) : liveTotal > 0 ? (
+                      <span className="flex items-center gap-2 text-[11px]">
+                        {counts.blocked > 0 && (
+                          <span style={{ color: "#EF4444" }}>🔴 {counts.blocked}</span>
+                        )}
+                        {counts.review > 0 && (
+                          <span style={{ color: "#FBB724" }}>🔔 {counts.review}</span>
+                        )}
+                        {counts.active > 0 && (
+                          <span style={{ color: "#818CF8" }}>🟡 {counts.active}</span>
+                        )}
+                      </span>
+                    ) : null}
+                  </div>
+                  {grandTotal > 0 && (
+                    <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.05)" }}>
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${pct}%`,
+                          background: pct === 100 ? "#22C55E" : counts.blocked > 0 ? "#EF4444" : "#6366F1",
+                        }}
+                      />
+                    </div>
                   )}
                 </Link>
               );
