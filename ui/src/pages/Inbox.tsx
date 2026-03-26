@@ -8,6 +8,7 @@ import { dashboardApi } from "../api/dashboard";
 import { issuesApi } from "../api/issues";
 import { agentsApi } from "../api/agents";
 import { heartbeatsApi } from "../api/heartbeats";
+import { projectsApi } from "../api/projects";
 import { useCompany } from "../context/CompanyContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
 import { queryKeys } from "../lib/queryKeys";
@@ -376,6 +377,18 @@ export function Inbox() {
     queryFn: () => heartbeatsApi.list(selectedCompanyId!),
     enabled: !!selectedCompanyId,
   });
+
+  const { data: projects } = useQuery({
+    queryKey: queryKeys.projects.list(selectedCompanyId!),
+    queryFn: () => projectsApi.list(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+  });
+
+  const projectById = useMemo(() => {
+    const map = new Map<string, { name: string; color?: string | null }>();
+    for (const p of projects ?? []) map.set(p.id, p);
+    return map;
+  }, [projects]);
 
   const touchedIssues = useMemo(() => getRecentTouchedIssues(touchedIssuesRaw), [touchedIssuesRaw]);
   const unreadTouchedIssues = useMemo(
@@ -776,6 +789,17 @@ export function Inbox() {
                         <span className="shrink-0 font-mono text-xs text-muted-foreground">
                           {issue.identifier ?? issue.id.slice(0, 8)}
                         </span>
+                        {issue.projectId && projectById.get(issue.projectId) && (() => {
+                          const proj = projectById.get(issue.projectId!)!;
+                          return (
+                            <span
+                              className="hidden shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full sm:inline"
+                              style={{ background: `${proj.color ?? "#6366F1"}20`, color: proj.color ?? "#6366F1" }}
+                            >
+                              {proj.name}
+                            </span>
+                          );
+                        })()}
                         {liveIssueIds.has(issue.id) && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-1.5 py-0.5 sm:gap-1.5 sm:px-2">
                             <span className="relative flex h-2 w-2">
