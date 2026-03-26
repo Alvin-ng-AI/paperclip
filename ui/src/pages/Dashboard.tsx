@@ -921,12 +921,13 @@ export function Dashboard() {
               >
                 {/* Top row */}
                 <div className="flex items-center justify-between mb-1.5">
-                  <span
-                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                  <Link
+                    to={`/issues/${issue.identifier ?? issue.id}`}
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full no-underline"
                     style={{ background: "rgba(239,68,68,0.1)", color: "#EF4444" }}
                   >
                     {issueId}
-                  </span>
+                  </Link>
                   <span
                     className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
                     style={{ background: "rgba(239,68,68,0.15)", color: "#EF4444" }}
@@ -935,7 +936,9 @@ export function Dashboard() {
                   </span>
                 </div>
                 {/* Title */}
-                <p className="text-[13px] font-semibold mb-1 line-clamp-2">{issue.title}</p>
+                <Link to={`/issues/${issue.identifier ?? issue.id}`} className="no-underline text-inherit">
+                  <p className="text-[13px] font-semibold mb-1 line-clamp-2 hover:opacity-80">{issue.title}</p>
+                </Link>
                 {/* Agent + time */}
                 <p className="text-[11px]" style={{ color: "#6B7280" }}>
                   {assignee ? <>👤 {assignee.name} · </> : null}

@@ -33,6 +33,8 @@ export function Approvals() {
     queryKey: queryKeys.approvals.list(selectedCompanyId!),
     queryFn: () => approvalsApi.list(selectedCompanyId!),
     enabled: !!selectedCompanyId,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
   });
 
   const { data: agents } = useQuery({
