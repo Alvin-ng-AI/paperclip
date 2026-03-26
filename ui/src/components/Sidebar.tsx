@@ -11,6 +11,7 @@ import {
   Boxes,
   Repeat,
   Settings,
+  ShieldCheck,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SidebarSection } from "./SidebarSection";
@@ -21,6 +22,7 @@ import { useDialog } from "../context/DialogContext";
 import { useCompany } from "../context/CompanyContext";
 import { heartbeatsApi } from "../api/heartbeats";
 import { issuesApi } from "../api/issues";
+import { approvalsApi } from "../api/approvals";
 import { queryKeys } from "../lib/queryKeys";
 import { useInboxBadge } from "../hooks/useInboxBadge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +56,16 @@ export function Sidebar() {
     staleTime: 30_000,
   });
   const reviewCount = reviewIssues?.length ?? 0;
+
+  const { data: pendingApprovals } = useQuery({
+    queryKey: queryKeys.approvals.list(selectedCompanyId!),
+    queryFn: () => approvalsApi.list(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+    select: (data) => data.filter((a) => a.status === "pending" || a.status === "revision_requested").length,
+  });
+  const approvalCount = pendingApprovals ?? 0;
 
   function openSearch() {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
@@ -124,6 +136,13 @@ export function Sidebar() {
             badgeTone="danger"
             badge2={reviewCount > 0 ? reviewCount : undefined}
             badge2Tone="amber"
+          />
+          <SidebarNavItem
+            to="/approvals"
+            label="Approvals"
+            icon={ShieldCheck}
+            badge={approvalCount > 0 ? approvalCount : undefined}
+            badgeTone="amber"
           />
           <SidebarNavItem to="/routines" label="Routines" icon={Repeat} textBadge="Beta" textBadgeTone="amber" />
           <SidebarNavItem to="/goals" label="Goals" icon={Target} />
