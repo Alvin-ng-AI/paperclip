@@ -402,7 +402,21 @@ export function Dashboard() {
             <Plus className="h-3 w-3" />
             New Task
           </button>
-          <Bell className="h-5 w-5" style={{ color: "#4B5563" }} />
+          <Link
+            to="/approvals"
+            className="relative no-underline"
+            title="Approvals"
+          >
+            <Bell className="h-5 w-5" style={{ color: allApprovalIssues.length > 0 ? "#FBB724" : "#4B5563" }} />
+            {allApprovalIssues.length > 0 && (
+              <span
+                className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full text-[9px] font-bold flex items-center justify-center"
+                style={{ background: "#FBB724", color: "#000" }}
+              >
+                {allApprovalIssues.length > 9 ? "9+" : allApprovalIssues.length}
+              </span>
+            )}
+          </Link>
         </div>
       </div>
 
