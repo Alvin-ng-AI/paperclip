@@ -409,9 +409,9 @@ export function Dashboard() {
             New Task
           </button>
           <Link
-            to="/approvals"
+            to="/issues?status=in_review"
             className="relative no-underline"
-            title="Approvals"
+            title="Pending review"
           >
             <Bell className="h-5 w-5" style={{ color: allApprovalIssues.length > 0 ? "#FBB724" : "#4B5563" }} />
             {allApprovalIssues.length > 0 && (

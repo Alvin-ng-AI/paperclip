@@ -134,8 +134,10 @@ export function Sidebar() {
             icon={CircleDot}
             badge={blockedCount > 0 ? blockedCount : undefined}
             badgeTone="danger"
+            badgeTo="/issues?status=blocked"
             badge2={reviewCount > 0 ? reviewCount : undefined}
             badge2Tone="amber"
+            badge2To="/issues?status=in_review"
           />
           <SidebarNavItem
             to="/approvals"

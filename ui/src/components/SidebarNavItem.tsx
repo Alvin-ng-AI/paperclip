@@ -1,4 +1,4 @@
-import { NavLink } from "@/lib/router";
+import { NavLink, Link } from "@/lib/router";
 import { cn } from "../lib/utils";
 import { useSidebar } from "../context/SidebarContext";
 import type { LucideIcon } from "lucide-react";
@@ -11,8 +11,10 @@ interface SidebarNavItemProps {
   className?: string;
   badge?: number;
   badgeTone?: "default" | "danger" | "amber";
+  badgeTo?: string;
   badge2?: number;
   badge2Tone?: "default" | "danger" | "amber";
+  badge2To?: string;
   textBadge?: string;
   textBadgeTone?: "default" | "amber";
   alert?: boolean;
@@ -27,8 +29,10 @@ export function SidebarNavItem({
   className,
   badge,
   badgeTone = "default",
+  badgeTo,
   badge2,
   badge2Tone = "default",
+  badge2To,
   textBadge,
   textBadgeTone = "default",
   alert = false,
@@ -81,26 +85,32 @@ export function SidebarNavItem({
       )}
       {(badge != null && badge > 0) || (badge2 != null && badge2 > 0) ? (
         <span className="ml-auto flex items-center gap-1">
-          {badge != null && badge > 0 && (
-            <span className={cn(
+          {badge != null && badge > 0 && (() => {
+            const cls = cn(
               "rounded-full px-1.5 py-0.5 text-xs leading-none",
               badgeTone === "danger" ? "bg-red-600/90 text-red-50"
               : badgeTone === "amber" ? "bg-amber-500/20 text-amber-500"
               : "bg-primary text-primary-foreground",
-            )}>
-              {badge}
-            </span>
-          )}
-          {badge2 != null && badge2 > 0 && (
-            <span className={cn(
+            );
+            return badgeTo ? (
+              <Link to={badgeTo} className={cn(cls, "no-underline hover:opacity-80 transition-opacity")} onClick={(e) => e.stopPropagation()}>{badge}</Link>
+            ) : (
+              <span className={cls}>{badge}</span>
+            );
+          })()}
+          {badge2 != null && badge2 > 0 && (() => {
+            const cls = cn(
               "rounded-full px-1.5 py-0.5 text-xs leading-none",
               badge2Tone === "danger" ? "bg-red-600/90 text-red-50"
               : badge2Tone === "amber" ? "bg-amber-500/20 text-amber-500"
               : "bg-primary text-primary-foreground",
-            )}>
-              {badge2}
-            </span>
-          )}
+            );
+            return badge2To ? (
+              <Link to={badge2To} className={cn(cls, "no-underline hover:opacity-80 transition-opacity")} onClick={(e) => e.stopPropagation()}>{badge2}</Link>
+            ) : (
+              <span className={cls}>{badge2}</span>
+            );
+          })()}
         </span>
       ) : null}
     </NavLink>
