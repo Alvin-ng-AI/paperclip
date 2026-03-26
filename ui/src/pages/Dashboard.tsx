@@ -6,6 +6,7 @@ import { issuesApi } from "../api/issues";
 import { agentsApi } from "../api/agents";
 import { projectsApi } from "../api/projects";
 import { shopifyApi } from "../api/shopify";
+import { goalsApi } from "../api/goals";
 import { useCompany } from "../context/CompanyContext";
 import { useDialog } from "../context/DialogContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
@@ -15,7 +16,7 @@ import { EmptyState } from "../components/EmptyState";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { timeAgo } from "../lib/timeAgo";
 import { LayoutDashboard, Bell, Plus, ChevronRight, Check, X, MessageSquare, Ban } from "lucide-react";
-import type { Agent, Issue, Project } from "@paperclipai/shared";
+import type { Agent, Issue, Project, Goal } from "@paperclipai/shared";
 import { AGENT_ROLE_LABELS } from "@paperclipai/shared";
 import { agentUrl, projectUrl, issueUrl } from "../lib/utils";
 
@@ -186,6 +187,14 @@ export function Dashboard() {
       .slice(0, 5);
   }, [doneIssues]);
 
+  const { data: goals } = useQuery({
+    queryKey: queryKeys.goals.list(selectedCompanyId!),
+    queryFn: () => goalsApi.list(selectedCompanyId!),
+    enabled: !!selectedCompanyId,
+    refetchInterval: 5 * 60_000,
+    staleTime: 2 * 60_000,
+  });
+
   const { data: shopifySales } = useQuery({
     queryKey: ["shopify", "sales", "7d"],
     queryFn: () => shopifyApi.sales(7),
@@ -237,6 +246,24 @@ export function Dashboard() {
   const activeProjects = useMemo(
     () => (projects ?? []).filter((p: Project) => !p.archivedAt),
     [projects],
+  );
+
+  const goalStatusMap = useMemo(() => {
+    const m = new Map<string, { active: number; blocked: number; review: number }>();
+    for (const issue of [...(inProgressIssues ?? []), ...(blockedIssues ?? []), ...(reviewIssues ?? [])]) {
+      if (!issue.goalId) continue;
+      const cur = m.get(issue.goalId) ?? { active: 0, blocked: 0, review: 0 };
+      if (issue.status === "blocked") cur.blocked++;
+      else if (issue.status === "in_review") cur.review++;
+      else cur.active++;
+      m.set(issue.goalId, cur);
+    }
+    return m;
+  }, [inProgressIssues, blockedIssues, reviewIssues]);
+
+  const activeGoals = useMemo(
+    () => (goals ?? []).filter((g: Goal) => g.status === "active"),
+    [goals],
   );
 
   const invalidate = () => {
@@ -1093,6 +1120,61 @@ export function Dashboard() {
               </div>
             );
           })}
+        </>
+      )}
+
+      {/* ── Goals Progress ───────────────────────────────────────── */}
+      {activeGoals.length > 0 && (
+        <>
+          <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+            <span
+              className="text-xs font-bold uppercase tracking-widest"
+              style={{ color: "#4B5563" }}
+            >
+              Goals
+            </span>
+            <Link to="/goals" className="text-[11px] no-underline" style={{ color: "#4B5563" }}>
+              All goals →
+            </Link>
+          </div>
+          <div className="px-4 flex flex-col gap-1.5 pb-2">
+            {activeGoals.map((goal: Goal) => {
+              const counts = goalStatusMap.get(goal.id) ?? { active: 0, blocked: 0, review: 0 };
+              const total = counts.active + counts.blocked + counts.review;
+              return (
+                <Link
+                  key={goal.id}
+                  to={`/goals/${goal.id}`}
+                  className="flex items-center gap-2.5 rounded-xl px-3 py-2 no-underline text-inherit transition-colors hover:bg-white/[0.03]"
+                  style={{
+                    background: "#0D1220",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <span
+                    className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                    style={{ background: "#6366F1" }}
+                  />
+                  <span className="flex-1 text-[13px] font-medium truncate">{goal.title}</span>
+                  {total === 0 ? (
+                    <span className="text-[11px]" style={{ color: "#374151" }}>No active tasks</span>
+                  ) : (
+                    <span className="flex items-center gap-2 text-[11px]">
+                      {counts.blocked > 0 && (
+                        <span style={{ color: "#EF4444" }}>🔴 {counts.blocked}</span>
+                      )}
+                      {counts.review > 0 && (
+                        <span style={{ color: "#FBB724" }}>🔔 {counts.review}</span>
+                      )}
+                      {counts.active > 0 && (
+                        <span style={{ color: "#818CF8" }}>🟡 {counts.active}</span>
+                      )}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
         </>
       )}
 
