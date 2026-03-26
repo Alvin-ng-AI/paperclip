@@ -267,10 +267,10 @@ export function Dashboard() {
     onError: () => pushToast({ title: "Cancel failed", tone: "error" }),
   });
 
-  // Resolve a blocked task: add comment with the info needed, move back to in_progress
+  // Resolve a blocked task: move back to in_progress with a comment
   const resolveMutation = useMutation({
     mutationFn: ({ issueId, body }: { issueId: string; body: string }) =>
-      issuesApi.addComment(issueId, `✅ Resolved by Alvin: ${body}`, true /* reopen */),
+      issuesApi.update(issueId, { status: "in_progress", comment: `✅ Resolved by Alvin: ${body}` }),
     onSuccess: (_d, { issueId }) => { clearCard(issueId); invalidate(); pushToast({ title: "Unblocked — agent will resume", tone: "success" }); },
     onError: () => pushToast({ title: "Failed to unblock", tone: "error" }),
   });
@@ -941,6 +941,8 @@ export function Dashboard() {
                   {assignee ? <>👤 {assignee.name} · </> : null}
                   {timeAgo(issue.updatedAt)}
                 </p>
+                {/* Blocker reason preview */}
+                <LastAgentComment issueId={issue.id} />
 
                 {/* Resolve input */}
                 {cs.mode === "resolve" && (
