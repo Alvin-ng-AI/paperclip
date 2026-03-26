@@ -248,6 +248,11 @@ export function Dashboard() {
     [projects],
   );
 
+  const projectById = useMemo(
+    () => new Map((projects ?? []).map((p: Project) => [p.id, p])),
+    [projects],
+  );
+
   const goalStatusMap = useMemo(() => {
     const m = new Map<string, { active: number; blocked: number; review: number; done: number }>();
     for (const issue of [...(inProgressIssues ?? []), ...(blockedIssues ?? []), ...(reviewIssues ?? [])]) {
@@ -731,8 +736,8 @@ export function Dashboard() {
                 border: "1px solid rgba(255,255,255,0.06)",
               }}
             >
-              {/* Top row: ID badge (linked) + status badge */}
-              <div className="flex items-center justify-between mb-1.5">
+              {/* Top row: ID badge (linked) + project chip + status badge */}
+              <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                 <Link
                   to={issueUrl(issue)}
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full no-underline"
@@ -740,8 +745,22 @@ export function Dashboard() {
                 >
                   {issueId}
                 </Link>
+                {issue.projectId && projectById.get(issue.projectId) && (() => {
+                  const proj = projectById.get(issue.projectId!)!;
+                  return (
+                    <span
+                      className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                      style={{
+                        background: `${proj.color ?? "#6366F1"}20`,
+                        color: proj.color ?? "#6366F1",
+                      }}
+                    >
+                      {proj.name}
+                    </span>
+                  );
+                })()}
                 <span
-                  className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                  className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full"
                   style={{ background: "rgba(251,191,36,0.15)", color: "#FBB724" }}
                 >
                   IN REVIEW
@@ -1018,7 +1037,7 @@ export function Dashboard() {
                 }}
               >
                 {/* Top row */}
-                <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
                   <Link
                     to={`/issues/${issue.identifier ?? issue.id}`}
                     className="text-[10px] font-bold px-2 py-0.5 rounded-full no-underline"
@@ -1026,8 +1045,22 @@ export function Dashboard() {
                   >
                     {issueId}
                   </Link>
+                  {issue.projectId && projectById.get(issue.projectId) && (() => {
+                    const proj = projectById.get(issue.projectId!)!;
+                    return (
+                      <span
+                        className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                        style={{
+                          background: `${proj.color ?? "#6366F1"}20`,
+                          color: proj.color ?? "#6366F1",
+                        }}
+                      >
+                        {proj.name}
+                      </span>
+                    );
+                  })()}
                   <span
-                    className="text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                    className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full"
                     style={{ background: "rgba(239,68,68,0.15)", color: "#EF4444" }}
                   >
                     BLOCKED
