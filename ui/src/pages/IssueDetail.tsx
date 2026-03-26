@@ -227,6 +227,8 @@ export function IssueDetail() {
     queryKey: queryKeys.issues.detail(issueId!),
     queryFn: () => issuesApi.get(issueId!),
     enabled: !!issueId,
+    refetchInterval: 15_000,
+    staleTime: 10_000,
   });
   const resolvedCompanyId = issue?.companyId ?? selectedCompanyId;
 
@@ -234,12 +236,16 @@ export function IssueDetail() {
     queryKey: queryKeys.issues.comments(issueId!),
     queryFn: () => issuesApi.listComments(issueId!),
     enabled: !!issueId,
+    refetchInterval: 10_000,
+    staleTime: 5_000,
   });
 
   const { data: activity } = useQuery({
     queryKey: queryKeys.issues.activity(issueId!),
     queryFn: () => activityApi.forIssue(issueId!),
     enabled: !!issueId,
+    refetchInterval: 15_000,
+    staleTime: 10_000,
   });
 
   const { data: linkedRuns } = useQuery({
