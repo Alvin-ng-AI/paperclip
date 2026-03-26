@@ -374,6 +374,12 @@ export function IssuesList({
         </div>
 
         <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+          {/* Issue count */}
+          {!isLoading && (
+            <span className="text-[11px] text-muted-foreground mr-1 tabular-nums hidden sm:inline">
+              {filtered.length}
+            </span>
+          )}
           {/* View mode toggle */}
           <div className="flex items-center border border-border rounded-md overflow-hidden mr-1">
             <button

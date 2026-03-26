@@ -570,6 +570,24 @@ export function Costs() {
       0,
     );
 
+  const spendForecast = useMemo(() => {
+    if (!from || !to || !spendData?.summary.spendCents) return null;
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    const nowDate = new Date();
+    // Only forecast for ongoing periods (to is in the future, from is in the past)
+    if (toDate < nowDate || fromDate > nowDate) return null;
+    const DAY_MS = 24 * 60 * 60_000;
+    const daysElapsed = Math.max(1, Math.floor((nowDate.getTime() - fromDate.getTime()) / DAY_MS) + 1);
+    const totalDays = Math.max(1, Math.floor((toDate.getTime() - fromDate.getTime()) / DAY_MS) + 1);
+    const dailyRateCents = spendData.summary.spendCents / daysElapsed;
+    const projectedCents = Math.round(dailyRateCents * totalDays);
+    const budgetCents = spendData.summary.budgetCents ?? 0;
+    const isOver = budgetCents > 0 && projectedCents > budgetCents;
+    const overPct = budgetCents > 0 ? Math.round((projectedCents / budgetCents) * 100) : null;
+    return { projectedCents, isOver, overPct, daysElapsed, totalDays };
+  }, [from, to, spendData]);
+
   const topFinanceEvents = (financeData?.events ?? []) as FinanceEvent[];
   const budgetPolicies = budgetData?.policies ?? [];
   const activeBudgetIncidents = budgetData?.activeIncidents ?? [];
@@ -750,6 +768,16 @@ export function Costs() {
                         <div className="text-xs text-muted-foreground">
                           {spendData.summary.utilizationPercent}% of monthly budget consumed in this range.
                         </div>
+                        {spendForecast && (
+                          <div className={cn("text-xs font-medium", spendForecast.isOver ? "text-red-500" : "text-emerald-500")}>
+                            Projected end-of-period: {formatCents(spendForecast.projectedCents)}
+                            {spendForecast.overPct != null && (
+                              <span className="ml-1 text-muted-foreground font-normal">
+                                ({spendForecast.overPct}% of budget · {spendForecast.daysElapsed}/{spendForecast.totalDays} days elapsed)
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ) : null}
                   </CardContent>
