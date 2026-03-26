@@ -17,7 +17,7 @@ import { assigneeValueFromSelection, suggestedCommentAssigneeValue } from "../li
 import { queryKeys } from "../lib/queryKeys";
 import { readIssueDetailBreadcrumb } from "../lib/issueDetailBreadcrumb";
 import { useProjectOrder } from "../hooks/useProjectOrder";
-import { relativeTime, cn, formatTokens, visibleRunCostUsd } from "../lib/utils";
+import { relativeTime, cn, formatTokens, visibleRunCostUsd, projectUrl } from "../lib/utils";
 import { InlineEditor } from "../components/InlineEditor";
 import { CommentThread } from "../components/CommentThread";
 import { IssueDocumentsSection } from "../components/IssueDocumentsSection";
@@ -861,7 +861,10 @@ export function IssueDetail() {
 
           {issue.projectId ? (
             <Link
-              to={`/projects/${issue.projectId}`}
+              to={(() => {
+                const proj = (projects ?? []).find((p) => p.id === issue.projectId);
+                return proj ? projectUrl(proj) : `/projects/${issue.projectId}`;
+              })()}
               className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors rounded px-1 -mx-1 py-0.5 min-w-0"
             >
               <Hexagon className="h-3 w-3 shrink-0" />
