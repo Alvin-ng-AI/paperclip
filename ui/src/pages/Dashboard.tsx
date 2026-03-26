@@ -1101,12 +1101,16 @@ export function Dashboard() {
                   {total === 0 ? (
                     <span className="text-[11px]" style={{ color: "#374151" }}>No active tasks</span>
                   ) : (
-                    <span className="flex items-center gap-2 text-[11px]">
-                      {counts.blocked > 0 && (
-                        <span style={{ color: "#EF4444" }}>🔴 {counts.blocked}</span>
+                    <span className="flex items-center gap-2 text-[11px]" onClick={(e) => e.stopPropagation()}>
+                      {counts.blocked > 0 && url && (
+                        <Link to={`${url}/issues?status=blocked`} className="no-underline hover:opacity-70" style={{ color: "#EF4444" }}>
+                          🔴 {counts.blocked}
+                        </Link>
                       )}
-                      {counts.review > 0 && (
-                        <span style={{ color: "#FBB724" }}>🔔 {counts.review}</span>
+                      {counts.review > 0 && url && (
+                        <Link to={`${url}/issues?status=in_review`} className="no-underline hover:opacity-70" style={{ color: "#FBB724" }}>
+                          🔔 {counts.review}
+                        </Link>
                       )}
                       {counts.active > 0 && (
                         <span style={{ color: "#818CF8" }}>🟡 {counts.active}</span>
