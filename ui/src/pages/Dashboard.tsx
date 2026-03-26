@@ -14,7 +14,7 @@ import { queryKeys } from "../lib/queryKeys";
 import { EmptyState } from "../components/EmptyState";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { timeAgo } from "../lib/timeAgo";
-import { LayoutDashboard, Bell, Plus, ChevronRight, Check, X, MessageSquare, Ban, Hexagon } from "lucide-react";
+import { LayoutDashboard, Bell, Plus, ChevronRight, Check, X, MessageSquare, Ban } from "lucide-react";
 import type { Agent, Issue, Project } from "@paperclipai/shared";
 import { AGENT_ROLE_LABELS } from "@paperclipai/shared";
 import { agentUrl, projectUrl, issueUrl } from "../lib/utils";
@@ -431,7 +431,11 @@ export function Dashboard() {
           const barColor = over ? "#EF4444" : warn ? "#F59E0B" : "#22C55E";
           const fmt = (cents: number) => `$${(cents / 100).toFixed(0)}`;
           return (
-            <div className="mx-4 mb-3 rounded-xl px-3 py-2.5" style={{ background: "#0D1220", border: `1px solid ${over ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.06)"}` }}>
+            <Link
+              to="/costs"
+              className="mx-4 mb-3 rounded-xl px-3 py-2.5 block no-underline text-inherit transition-opacity hover:opacity-80"
+              style={{ background: "#0D1220", border: `1px solid ${over ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.06)"}` }}
+            >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#4B5563" }}>AI Budget · This Month</span>
                 <span className="text-[10px] font-semibold" style={{ color: barColor }}>
@@ -441,7 +445,7 @@ export function Dashboard() {
               <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
                 <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: barColor }} />
               </div>
-            </div>
+            </Link>
           );
         })()
       )}
