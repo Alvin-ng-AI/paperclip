@@ -7,6 +7,7 @@ import { useSidebar } from "../context/SidebarContext";
 import { issuesApi } from "../api/issues";
 import { agentsApi } from "../api/agents";
 import { projectsApi } from "../api/projects";
+import { goalsApi } from "../api/goals";
 import { queryKeys } from "../lib/queryKeys";
 import {
   CommandDialog,
@@ -40,7 +41,7 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
   const { selectedCompanyId } = useCompany();
-  const { openNewIssue, openNewAgent } = useDialog();
+  const { openNewIssue, openNewAgent, openNewProject, openNewGoal } = useDialog();
   const { isMobile, setSidebarOpen } = useSidebar();
   const searchQuery = query.trim();
 
@@ -86,6 +87,16 @@ export function CommandPalette() {
   const projects = useMemo(
     () => allProjects.filter((p) => !p.archivedAt),
     [allProjects],
+  );
+
+  const { data: allGoals = [] } = useQuery({
+    queryKey: queryKeys.goals.list(selectedCompanyId!),
+    queryFn: () => goalsApi.list(selectedCompanyId!),
+    enabled: !!selectedCompanyId && open,
+  });
+  const goals = useMemo(
+    () => allGoals.filter((g) => g.status === "active"),
+    [allGoals],
   );
 
   function go(path: string) {
@@ -136,9 +147,23 @@ export function CommandPalette() {
             <Plus className="mr-2 h-4 w-4" />
             Create new agent
           </CommandItem>
-          <CommandItem onSelect={() => go("/projects")}>
+          <CommandItem
+            onSelect={() => {
+              setOpen(false);
+              openNewProject();
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Create new project
+          </CommandItem>
+          <CommandItem
+            onSelect={() => {
+              setOpen(false);
+              openNewGoal();
+            }}
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create new goal
           </CommandItem>
         </CommandGroup>
 
@@ -252,6 +277,20 @@ export function CommandPalette() {
                 <CommandItem key={project.id} onSelect={() => go(projectUrl(project))}>
                   <Hexagon className="mr-2 h-4 w-4" />
                   {project.name}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
+        )}
+
+        {goals.length > 0 && (
+          <>
+            <CommandSeparator />
+            <CommandGroup heading="Goals">
+              {goals.slice(0, 8).map((goal) => (
+                <CommandItem key={goal.id} onSelect={() => go(`/goals/${goal.id}`)}>
+                  <Target className="mr-2 h-4 w-4 text-indigo-400" />
+                  {goal.title}
                 </CommandItem>
               ))}
             </CommandGroup>
