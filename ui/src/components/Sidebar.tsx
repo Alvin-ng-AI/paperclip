@@ -46,6 +46,15 @@ export function Sidebar() {
   });
   const blockedCount = blockedIssues?.length ?? 0;
 
+  const { data: reviewIssues } = useQuery({
+    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "in_review"],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { status: "in_review" }),
+    enabled: !!selectedCompanyId,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const reviewCount = reviewIssues?.length ?? 0;
+
   function openSearch() {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
   }
@@ -113,6 +122,8 @@ export function Sidebar() {
             icon={CircleDot}
             badge={blockedCount > 0 ? blockedCount : undefined}
             badgeTone="danger"
+            badge2={reviewCount > 0 ? reviewCount : undefined}
+            badge2Tone="amber"
           />
           <SidebarNavItem to="/routines" label="Routines" icon={Repeat} textBadge="Beta" textBadgeTone="amber" />
           <SidebarNavItem to="/goals" label="Goals" icon={Target} />

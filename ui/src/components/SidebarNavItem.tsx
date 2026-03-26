@@ -10,7 +10,9 @@ interface SidebarNavItemProps {
   end?: boolean;
   className?: string;
   badge?: number;
-  badgeTone?: "default" | "danger";
+  badgeTone?: "default" | "danger" | "amber";
+  badge2?: number;
+  badge2Tone?: "default" | "danger" | "amber";
   textBadge?: string;
   textBadgeTone?: "default" | "amber";
   alert?: boolean;
@@ -25,6 +27,8 @@ export function SidebarNavItem({
   className,
   badge,
   badgeTone = "default",
+  badge2,
+  badge2Tone = "default",
   textBadge,
   textBadgeTone = "default",
   alert = false,
@@ -75,18 +79,30 @@ export function SidebarNavItem({
           <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400">{liveCount} live</span>
         </span>
       )}
-      {badge != null && badge > 0 && (
-        <span
-          className={cn(
-            "ml-auto rounded-full px-1.5 py-0.5 text-xs leading-none",
-            badgeTone === "danger"
-              ? "bg-red-600/90 text-red-50"
+      {(badge != null && badge > 0) || (badge2 != null && badge2 > 0) ? (
+        <span className="ml-auto flex items-center gap-1">
+          {badge != null && badge > 0 && (
+            <span className={cn(
+              "rounded-full px-1.5 py-0.5 text-xs leading-none",
+              badgeTone === "danger" ? "bg-red-600/90 text-red-50"
+              : badgeTone === "amber" ? "bg-amber-500/20 text-amber-500"
               : "bg-primary text-primary-foreground",
+            )}>
+              {badge}
+            </span>
           )}
-        >
-          {badge}
+          {badge2 != null && badge2 > 0 && (
+            <span className={cn(
+              "rounded-full px-1.5 py-0.5 text-xs leading-none",
+              badge2Tone === "danger" ? "bg-red-600/90 text-red-50"
+              : badge2Tone === "amber" ? "bg-amber-500/20 text-amber-500"
+              : "bg-primary text-primary-foreground",
+            )}>
+              {badge2}
+            </span>
+          )}
         </span>
-      )}
+      ) : null}
     </NavLink>
   );
 }

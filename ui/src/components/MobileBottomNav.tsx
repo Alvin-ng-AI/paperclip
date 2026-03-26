@@ -25,6 +25,7 @@ interface MobileNavLinkItem {
   label: string;
   icon: typeof House;
   badge?: number;
+  badgeTone?: "primary" | "danger" | "amber";
 }
 
 interface MobileNavActionItem {
@@ -50,6 +51,18 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
   });
   const blockedCount = blockedIssues?.length ?? 0;
 
+  const { data: reviewIssues } = useQuery({
+    queryKey: [...queryKeys.issues.list(selectedCompanyId!), "in_review"],
+    queryFn: () => issuesApi.list(selectedCompanyId!, { status: "in_review" }),
+    enabled: !!selectedCompanyId,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+  const reviewCount = reviewIssues?.length ?? 0;
+
+  const issuesBadge = blockedCount > 0 ? blockedCount : reviewCount > 0 ? reviewCount : undefined;
+  const issuesBadgeTone = blockedCount > 0 ? "danger" : reviewCount > 0 ? "amber" : "primary";
+
   const items = useMemo<MobileNavItem[]>(
     () => [
       { type: "link", to: "/dashboard", label: "Home", icon: House },
@@ -58,7 +71,8 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
         to: "/issues",
         label: "Issues",
         icon: CircleDot,
-        badge: blockedCount > 0 ? blockedCount : undefined,
+        badge: issuesBadge,
+        badgeTone: issuesBadgeTone,
       },
       { type: "action", label: "Create", icon: SquarePen, onClick: () => openNewIssue() },
       { type: "link", to: "/agents/all", label: "Agents", icon: Users },
@@ -70,7 +84,7 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
         badge: inboxBadge.inbox,
       },
     ],
-    [openNewIssue, inboxBadge.inbox, blockedCount],
+    [openNewIssue, inboxBadge.inbox, issuesBadge, issuesBadgeTone],
   );
 
   return (
@@ -123,7 +137,12 @@ export function MobileBottomNav({ visible }: MobileBottomNavProps) {
                   <span className="relative">
                     <Icon className={cn("h-[18px] w-[18px]", isActive && "stroke-[2.3]")} />
                     {item.badge != null && item.badge > 0 && (
-                      <span className="absolute -right-2 -top-2 rounded-full bg-primary px-1.5 py-0.5 text-[10px] leading-none text-primary-foreground">
+                      <span className={cn(
+                        "absolute -right-2 -top-2 rounded-full px-1.5 py-0.5 text-[10px] leading-none",
+                        item.badgeTone === "danger" ? "bg-red-600/90 text-red-50"
+                        : item.badgeTone === "amber" ? "bg-amber-500/20 text-amber-500"
+                        : "bg-primary text-primary-foreground",
+                      )}>
                         {item.badge > 99 ? "99+" : item.badge}
                       </span>
                     )}
