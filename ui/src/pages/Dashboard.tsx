@@ -210,6 +210,16 @@ export function Dashboard() {
     return m;
   }, [inProgressIssues]);
 
+  const agentReviewCountMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const issue of reviewIssues ?? []) {
+      if (issue.assigneeAgentId) {
+        m.set(issue.assigneeAgentId, (m.get(issue.assigneeAgentId) ?? 0) + 1);
+      }
+    }
+    return m;
+  }, [reviewIssues]);
+
   // Map projectId → { active, blocked, review }
   const projectStatusMap = useMemo(() => {
     const m = new Map<string, { active: number; blocked: number; review: number }>();
@@ -541,6 +551,7 @@ export function Dashboard() {
           const badge = STATUS_BADGE[ds];
           const roleLabel = AGENT_ROLE_LABELS[agent.role] ?? agent.role;
           const currentTask = agentTaskMap.get(agent.id);
+          const reviewCount = agentReviewCountMap.get(agent.id) ?? 0;
           return (
             <Link
               key={agent.id}
@@ -563,6 +574,15 @@ export function Dashboard() {
                   </div>
                 )}
               </div>
+              {reviewCount > 0 && (
+                <div
+                  className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0"
+                  style={{ background: "rgba(251,191,36,0.15)", color: "#FBB724" }}
+                  title={`${reviewCount} awaiting approval`}
+                >
+                  {reviewCount} review
+                </div>
+              )}
               {(agent.spentMonthlyCents ?? 0) > 0 && (
                 <div className="text-[10px] flex-shrink-0" style={{ color: "#4B5563" }}>
                   ${((agent.spentMonthlyCents ?? 0) / 100).toFixed(0)}
