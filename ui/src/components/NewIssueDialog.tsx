@@ -286,6 +286,8 @@ export function NewIssueDialog() {
   const [priority, setPriority] = useState("");
   const [assigneeValue, setAssigneeValue] = useState("");
   const [projectId, setProjectId] = useState("");
+  const [parentId, setParentId] = useState<string | undefined>(undefined);
+  const [goalId, setGoalId] = useState<string | undefined>(undefined);
   const [projectWorkspaceId, setProjectWorkspaceId] = useState("");
   const [assigneeOptionsOpen, setAssigneeOptionsOpen] = useState(false);
   const [assigneeModelOverride, setAssigneeModelOverride] = useState("");
@@ -565,6 +567,8 @@ export function NewIssueDialog() {
       setSelectedExecutionWorkspaceId("");
       executionWorkspaceDefaultProjectId.current = defaultProjectId || null;
     }
+    setParentId(newIssueDefaults.parentId);
+    setGoalId(newIssueDefaults.goalId);
   }, [newIssueOpen, newIssueDefaults, orderedProjects]);
 
   useEffect(() => {
@@ -668,6 +672,8 @@ export function NewIssueDialog() {
       ...(selectedAssigneeAgentId ? { assigneeAgentId: selectedAssigneeAgentId } : {}),
       ...(selectedAssigneeUserId ? { assigneeUserId: selectedAssigneeUserId } : {}),
       ...(projectId ? { projectId } : {}),
+      ...(parentId ? { parentId } : {}),
+      ...(goalId ? { goalId } : {}),
       ...(projectWorkspaceId ? { projectWorkspaceId } : {}),
       ...(assigneeAdapterOverrides ? { assigneeAdapterOverrides } : {}),
       ...(executionWorkspacePolicy?.enabled ? { executionWorkspacePreference: executionWorkspaceMode } : {}),
