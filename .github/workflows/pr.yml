@@ -74,6 +74,9 @@ jobs:
       - name: Typecheck
         run: pnpm -r typecheck
 
+      - name: Clean up stale embedded Postgres temp dirs
+        run: rm -rf /tmp/paperclip-db-* /tmp/paperclip-routines-* || true
+
       - name: Run tests
         run: pnpm test:run
 
