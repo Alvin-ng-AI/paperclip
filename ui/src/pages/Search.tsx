@@ -85,10 +85,11 @@ function descriptionSnippet(description: string | null | undefined, query: strin
 interface SearchResultCardProps {
   issue: Issue;
   agentName?: string;
+  project?: { name: string; color?: string | null };
   query: string;
 }
 
-function SearchResultCard({ issue, agentName, query }: SearchResultCardProps) {
+function SearchResultCard({ issue, agentName, project, query }: SearchResultCardProps) {
   const issuePathId = issue.identifier ?? issue.id;
   const identifier = issue.identifier ?? issue.id.slice(0, 8);
   const snippet = descriptionSnippet(issue.description, query);
@@ -110,6 +111,14 @@ function SearchResultCard({ issue, agentName, query }: SearchResultCardProps) {
           )}
           <LastAgentComment issueId={issue.id} />
           <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+            {project && (
+              <span
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+                style={{ background: `${project.color ?? "#6366F1"}20`, color: project.color ?? "#6366F1" }}
+              >
+                {project.name}
+              </span>
+            )}
             {agentName && <span>{agentName}</span>}
             <span>{timeAgo(issue.updatedAt)}</span>
             <span className={cn(
@@ -191,6 +200,12 @@ export function SearchPage() {
     for (const a of agents ?? []) map[a.id] = a.name;
     return map;
   }, [agents]);
+
+  const projectById = useMemo(() => {
+    const map = new Map<string, { name: string; color?: string | null }>();
+    for (const p of projects ?? []) map.set(p.id, p);
+    return map;
+  }, [projects]);
 
   const cutoff = cutoffFromRange(dateRange);
   const filteredIssues = useMemo((): Issue[] => {
@@ -291,6 +306,7 @@ export function SearchPage() {
                 key={issue.id}
                 issue={issue}
                 agentName={issue.assigneeAgentId ? agentMap[issue.assigneeAgentId] : undefined}
+                project={issue.projectId ? projectById.get(issue.projectId) : undefined}
                 query={debouncedQuery}
               />
             ))}
