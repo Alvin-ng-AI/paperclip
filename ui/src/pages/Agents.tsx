@@ -33,6 +33,18 @@ const adapterLabels: Record<string, string> = {
 
 const roleLabels = AGENT_ROLE_LABELS as Record<string, string>;
 
+function modelChip(rawModel: string | undefined): { label: string; color: string } | null {
+  if (!rawModel || rawModel === "default") return null;
+  if (rawModel.includes("haiku")) return { label: "Haiku", color: "#22C55E" };
+  if (rawModel.includes("sonnet")) return { label: "Sonnet", color: "#818CF8" };
+  if (rawModel.includes("opus")) return { label: "Opus", color: "#F59E0B" };
+  if (rawModel.includes("flash")) return { label: "Flash", color: "#22C55E" };
+  if (rawModel.includes("gemini")) return { label: "Gemini", color: "#34D399" };
+  if (rawModel.includes("gpt-4o-mini")) return { label: "4o-mini", color: "#22C55E" };
+  if (rawModel.includes("gpt-4o")) return { label: "4o", color: "#818CF8" };
+  return null;
+}
+
 type FilterTab = "all" | "active" | "paused" | "error";
 
 function matchesFilter(status: string, tab: FilterTab, showTerminated: boolean): boolean {
@@ -257,9 +269,19 @@ export function Agents() {
                           liveCount={liveRunByAgent.get(agent.id)!.liveCount}
                         />
                       )}
-                      <span className="text-xs text-muted-foreground font-mono w-14 text-right">
-                        {adapterLabels[agent.adapterType] ?? agent.adapterType}
-                      </span>
+                      {(() => {
+                        const chip = modelChip(agent.adapterConfig?.model as string | undefined);
+                        return chip ? (
+                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded font-mono"
+                            style={{ background: `${chip.color}20`, color: chip.color }}>
+                            {chip.label}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground font-mono w-14 text-right">
+                            {adapterLabels[agent.adapterType] ?? agent.adapterType}
+                          </span>
+                        );
+                      })()}
                       {(agent.spentMonthlyCents ?? 0) > 0 && (
                         <span className={`text-xs font-mono w-14 text-right tabular-nums ${
                           agent.budgetMonthlyCents && agent.budgetMonthlyCents > 0 && (agent.spentMonthlyCents ?? 0) > agent.budgetMonthlyCents
@@ -366,9 +388,19 @@ function OrgTreeNode({
             )}
             {agent && (
               <>
-                <span className="text-xs text-muted-foreground font-mono w-14 text-right">
-                  {adapterLabels[agent.adapterType] ?? agent.adapterType}
-                </span>
+                {(() => {
+                  const chip = modelChip(agent.adapterConfig?.model as string | undefined);
+                  return chip ? (
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded font-mono"
+                      style={{ background: `${chip.color}20`, color: chip.color }}>
+                      {chip.label}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-muted-foreground font-mono w-14 text-right">
+                      {adapterLabels[agent.adapterType] ?? agent.adapterType}
+                    </span>
+                  );
+                })()}
                 {(agent.spentMonthlyCents ?? 0) > 0 && (
                   <span className={`text-xs font-mono w-14 text-right tabular-nums ${
                     agent.budgetMonthlyCents && agent.budgetMonthlyCents > 0 && (agent.spentMonthlyCents ?? 0) > agent.budgetMonthlyCents
