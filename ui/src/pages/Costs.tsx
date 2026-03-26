@@ -158,6 +158,8 @@ export function Costs() {
   const [activeBiller, setActiveBiller] = useState("all");
   const [bulkModel, setBulkModel] = useState("claude-haiku-4-5-20251001");
   const [bulkSwitching, setBulkSwitching] = useState(false);
+  const [bulkConfirmPending, setBulkConfirmPending] = useState(false);
+  const bulkConfirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     preset,
@@ -326,6 +328,18 @@ export function Costs() {
       (a) => a.status !== "terminated" && (!a.adapterType || a.adapterType === "claude_local"),
     );
     if (eligible.length === 0) return;
+
+    if (!bulkConfirmPending) {
+      // First click: show confirmation state for 4s
+      setBulkConfirmPending(true);
+      if (bulkConfirmTimerRef.current) clearTimeout(bulkConfirmTimerRef.current);
+      bulkConfirmTimerRef.current = setTimeout(() => setBulkConfirmPending(false), 4000);
+      return;
+    }
+
+    // Second click: confirmed — execute
+    if (bulkConfirmTimerRef.current) clearTimeout(bulkConfirmTimerRef.current);
+    setBulkConfirmPending(false);
     setBulkSwitching(true);
     try {
       await Promise.all(
@@ -822,8 +836,14 @@ export function Costs() {
                             })}
                           </SelectContent>
                         </Select>
-                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={handleBulkSwitch} disabled={bulkSwitching}>
-                          {bulkSwitching ? "Switching…" : "Apply to all"}
+                        <Button
+                          size="sm"
+                          variant={bulkConfirmPending ? "destructive" : "outline"}
+                          className="h-6 text-[10px] px-2 shrink-0"
+                          onClick={handleBulkSwitch}
+                          disabled={bulkSwitching}
+                        >
+                          {bulkSwitching ? "Switching…" : bulkConfirmPending ? "Confirm? (click again)" : "Apply to all"}
                         </Button>
                       </div>
                     )}
