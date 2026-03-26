@@ -7,6 +7,7 @@ import { heartbeatsApi } from "../api/heartbeats";
 import { agentsApi } from "../api/agents";
 import { authApi } from "../api/auth";
 import { projectsApi } from "../api/projects";
+import { goalsApi } from "../api/goals";
 import { useCompany } from "../context/CompanyContext";
 import { useDialog } from "../context/DialogContext";
 import { usePanel } from "../context/PanelContext";
@@ -52,6 +53,7 @@ import {
   Plus,
   Repeat,
   SlidersHorizontal,
+  Target,
   Trash2,
 } from "lucide-react";
 import type { ActivityEvent } from "@paperclipai/shared";
@@ -309,6 +311,13 @@ export function IssueDetail() {
     queryKey: queryKeys.projects.list(selectedCompanyId!),
     queryFn: () => projectsApi.list(selectedCompanyId!),
     enabled: !!selectedCompanyId,
+  });
+
+  const { data: goals } = useQuery({
+    queryKey: queryKeys.goals.list(selectedCompanyId!),
+    queryFn: () => goalsApi.list(selectedCompanyId!),
+    enabled: !!selectedCompanyId && !!issue?.goalId,
+    staleTime: 5 * 60_000,
   });
   const currentUserId = session?.user?.id ?? session?.session?.userId ?? null;
   const { orderedProjects } = useProjectOrder({
@@ -858,6 +867,19 @@ export function IssueDetail() {
               No project
             </span>
           )}
+
+          {issue.goalId && (() => {
+            const goal = (goals ?? []).find((g) => g.id === issue.goalId);
+            return goal ? (
+              <Link
+                to={`/goals/${issue.goalId}`}
+                className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors rounded px-1 -mx-1 py-0.5 min-w-0"
+              >
+                <Target className="h-3 w-3 shrink-0" />
+                <span className="truncate">{goal.title}</span>
+              </Link>
+            ) : null;
+          })()}
 
           {(issue.labels ?? []).length > 0 && (
             <div className="hidden sm:flex items-center gap-1">
