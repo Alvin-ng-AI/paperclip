@@ -156,6 +156,8 @@ export function Costs() {
   const [mainTab, setMainTab] = useState<"overview" | "budgets" | "providers" | "billers" | "finance">("overview");
   const [activeProvider, setActiveProvider] = useState("all");
   const [activeBiller, setActiveBiller] = useState("all");
+  const [bulkModel, setBulkModel] = useState("claude-haiku-4-5-20251001");
+  const [bulkSwitching, setBulkSwitching] = useState(false);
 
   const {
     preset,
@@ -318,6 +320,25 @@ export function Costs() {
     },
     onSuccess: () => { void refetchAgents(); },
   });
+
+  const handleBulkSwitch = async () => {
+    const eligible = (agentsList ?? []).filter(
+      (a) => a.status !== "terminated" && (!a.adapterType || a.adapterType === "claude_local"),
+    );
+    if (eligible.length === 0) return;
+    setBulkSwitching(true);
+    try {
+      await Promise.all(
+        eligible.map((a) => {
+          const existing = (a.adapterConfig ?? {}) as Record<string, unknown>;
+          return agentsApi.update(a.id, { adapterConfig: { ...existing, model: bulkModel } }, companyId);
+        }),
+      );
+      void refetchAgents();
+    } finally {
+      setBulkSwitching(false);
+    }
+  };
 
   const { data: providerData } = useQuery({
     queryKey: queryKeys.usageByProvider(companyId, from || undefined, to || undefined),
@@ -750,6 +771,34 @@ export function Costs() {
                     <CardDescription>What each agent consumed in the selected period.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-2 px-5 pb-5 pt-2">
+                    {adapterModels && adapterModels.length > 0 && (agentsList ?? []).some(
+                      (a) => a.status !== "terminated" && (!a.adapterType || a.adapterType === "claude_local"),
+                    ) && (
+                      <div className="flex items-center gap-2 border border-border px-3 py-2 mb-1">
+                        <span className="text-[10px] text-muted-foreground shrink-0">Switch all agents to</span>
+                        <Select value={bulkModel} onValueChange={setBulkModel} disabled={bulkSwitching}>
+                          <SelectTrigger className="h-6 text-[10px] px-2 py-0 w-48 border-border/50">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {adapterModels.map((m) => {
+                              const hint = m.id.includes("opus") ? "~5× cost"
+                                : m.id.includes("haiku") ? "~80% cheaper"
+                                : m.id.includes("sonnet") ? "balanced"
+                                : "";
+                              return (
+                                <SelectItem key={m.id} value={m.id} className="text-xs">
+                                  {m.label}{hint ? <span className="ml-1.5 text-muted-foreground">({hint})</span> : null}
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                        <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={handleBulkSwitch} disabled={bulkSwitching}>
+                          {bulkSwitching ? "Switching…" : "Apply to all"}
+                        </Button>
+                      </div>
+                    )}
                     {(spendData?.byAgent.length ?? 0) === 0 ? (
                       <p className="text-sm text-muted-foreground">No cost events yet.</p>
                     ) : (
