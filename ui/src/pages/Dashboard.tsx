@@ -1173,6 +1173,7 @@ export function Dashboard() {
 
           {recentDone.map((issue) => {
             const assignee = issue.assigneeAgentId ? agentMap.get(issue.assigneeAgentId) : null;
+            const proj = issue.projectId ? projectById.get(issue.projectId) : undefined;
             return (
               <div
                 key={issue.id}
@@ -1189,6 +1190,14 @@ export function Dashboard() {
                     {assignee?.name ?? "—"} · {timeAgo(issue.updatedAt)}
                   </div>
                 </div>
+                {proj && (
+                  <span
+                    className="text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 hidden sm:inline"
+                    style={{ background: `${proj.color ?? "#6366F1"}20`, color: proj.color ?? "#6366F1" }}
+                  >
+                    {proj.name}
+                  </span>
+                )}
                 <span
                   className="text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0"
                   style={{ background: "rgba(34,197,94,0.12)", color: "#22C55E" }}
