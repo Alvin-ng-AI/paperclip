@@ -9,6 +9,7 @@ import {
 } from "../api/agents";
 import { companySkillsApi } from "../api/companySkills";
 import { budgetsApi } from "../api/budgets";
+import { projectsApi } from "../api/projects";
 import { heartbeatsApi } from "../api/heartbeats";
 import { instanceSettingsApi } from "../api/instanceSettings";
 import { ApiError } from "../api/client";
@@ -576,6 +577,18 @@ export function AgentDetail() {
     enabled: !!resolvedCompanyId && needsDashboardData,
   });
 
+  const { data: allProjects } = useQuery({
+    queryKey: queryKeys.projects.list(resolvedCompanyId!),
+    queryFn: () => projectsApi.list(resolvedCompanyId!),
+    enabled: !!resolvedCompanyId && needsDashboardData,
+    staleTime: 60_000,
+  });
+  const projectById = useMemo(() => {
+    const map = new Map<string, { name: string; color?: string | null }>();
+    for (const p of allProjects ?? []) map.set(p.id, p);
+    return map;
+  }, [allProjects]);
+
   const { data: allAgents } = useQuery({
     queryKey: queryKeys.agents.list(resolvedCompanyId!),
     queryFn: () => agentsApi.list(resolvedCompanyId!),
@@ -1012,6 +1025,7 @@ export function AgentDetail() {
           agent={agent}
           runs={heartbeats ?? []}
           assignedIssues={assignedIssues}
+          projectById={projectById}
           runtimeState={runtimeState}
           agentId={agent.id}
           agentRouteId={canonicalAgentRef}
@@ -1161,6 +1175,7 @@ function AgentOverview({
   agent,
   runs,
   assignedIssues,
+  projectById,
   runtimeState,
   agentId,
   agentRouteId,
@@ -1168,7 +1183,8 @@ function AgentOverview({
 }: {
   agent: AgentDetailRecord;
   runs: HeartbeatRun[];
-  assignedIssues: { id: string; title: string; status: string; priority: string; identifier?: string | null; createdAt: Date }[];
+  assignedIssues: { id: string; title: string; status: string; priority: string; identifier?: string | null; createdAt: Date; projectId?: string | null }[];
+  projectById: Map<string, { name: string; color?: string | null }>;
   runtimeState?: AgentRuntimeState;
   agentId: string;
   agentRouteId: string;
@@ -1253,15 +1269,30 @@ function AgentOverview({
           <p className="text-sm text-muted-foreground">No assigned issues.</p>
         ) : (
           <div className="border border-border rounded-lg">
-            {assignedIssues.slice(0, 10).map((issue) => (
-              <EntityRow
-                key={issue.id}
-                identifier={issue.identifier ?? issue.id.slice(0, 8)}
-                title={issue.title}
-                to={`/issues/${issue.identifier ?? issue.id}`}
-                trailing={<StatusBadge status={issue.status} />}
-              />
-            ))}
+            {assignedIssues.slice(0, 10).map((issue) => {
+              const proj = issue.projectId ? projectById.get(issue.projectId) : undefined;
+              return (
+                <EntityRow
+                  key={issue.id}
+                  identifier={issue.identifier ?? issue.id.slice(0, 8)}
+                  title={issue.title}
+                  to={`/issues/${issue.identifier ?? issue.id}`}
+                  trailing={
+                    <div className="flex items-center gap-2">
+                      {proj && (
+                        <span
+                          className="hidden text-[10px] font-medium px-1.5 py-0.5 rounded-full sm:inline"
+                          style={{ background: `${proj.color ?? "#6366F1"}20`, color: proj.color ?? "#6366F1" }}
+                        >
+                          {proj.name}
+                        </span>
+                      )}
+                      <StatusBadge status={issue.status} />
+                    </div>
+                  }
+                />
+              );
+            })}
             {assignedIssues.length > 10 && (
               <div className="px-3 py-2 text-xs text-muted-foreground text-center border-t border-border">
                 +{assignedIssues.length - 10} more issues
