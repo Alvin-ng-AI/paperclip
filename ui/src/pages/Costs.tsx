@@ -13,6 +13,7 @@ import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronRight, Coins, DollarSi
 import { agentsApi } from "../api/agents";
 import { budgetsApi } from "../api/budgets";
 import { costsApi } from "../api/costs";
+import { projectsApi } from "../api/projects";
 import { BillerSpendCard } from "../components/BillerSpendCard";
 import { BudgetIncidentCard } from "../components/BudgetIncidentCard";
 import { BudgetPolicyCard } from "../components/BudgetPolicyCard";
@@ -315,6 +316,18 @@ export function Costs() {
     }
     return map;
   }, [agentsList]);
+
+  const { data: projectsList } = useQuery({
+    queryKey: queryKeys.projects.list(companyId),
+    queryFn: () => projectsApi.list(companyId),
+    enabled: !!selectedCompanyId,
+    staleTime: 60_000,
+  });
+  const projectById = useMemo(() => {
+    const map = new Map<string, { name: string; color?: string | null }>();
+    for (const p of projectsList ?? []) map.set(p.id, p);
+    return map;
+  }, [projectsList]);
   const modelMutation = useMutation({
     mutationFn: ({ agentId, model }: { agentId: string; model: string }) => {
       const existing = agentsMap.get(agentId)?.adapterConfig ?? {};
@@ -977,15 +990,27 @@ export function Costs() {
                       {(spendData?.byProject.length ?? 0) === 0 ? (
                         <p className="text-sm text-muted-foreground">No project-attributed run costs yet.</p>
                       ) : (
-                        spendData?.byProject.map((row, index) => (
-                          <div
-                            key={row.projectId ?? `unattributed-${index}`}
-                            className="flex items-center justify-between gap-3 border border-border px-3 py-2 text-sm"
-                          >
-                            <span className="truncate">{row.projectName ?? row.projectId ?? "Unattributed"}</span>
-                            <span className="font-medium tabular-nums">{formatCents(row.costCents)}</span>
-                          </div>
-                        ))
+                        spendData?.byProject.map((row, index) => {
+                          const proj = row.projectId ? projectById.get(row.projectId) : undefined;
+                          const color = proj?.color ?? "#6366F1";
+                          return (
+                            <div
+                              key={row.projectId ?? `unattributed-${index}`}
+                              className="flex items-center justify-between gap-3 border border-border px-3 py-2 text-sm"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                {row.projectId && (
+                                  <span
+                                    className="h-2.5 w-2.5 rounded-sm shrink-0"
+                                    style={{ background: color }}
+                                  />
+                                )}
+                                <span className="truncate">{row.projectName ?? row.projectId ?? "Unattributed"}</span>
+                              </div>
+                              <span className="font-medium tabular-nums">{formatCents(row.costCents)}</span>
+                            </div>
+                          );
+                        })
                       )}
                     </CardContent>
                   </Card>
