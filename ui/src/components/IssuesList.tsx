@@ -43,7 +43,7 @@ export type IssueViewState = {
   projects: string[];
   sortField: "status" | "priority" | "title" | "created" | "updated";
   sortDir: "asc" | "desc";
-  groupBy: "status" | "priority" | "assignee" | "none";
+  groupBy: "status" | "priority" | "assignee" | "project" | "none";
   viewMode: "list" | "board";
   collapsedGroups: string[];
 };
@@ -293,6 +293,14 @@ export function IssuesList({
         .filter((p) => groups[p]?.length)
         .map((p) => ({ key: p, label: statusLabel(p), items: groups[p]! }));
     }
+    if (viewState.groupBy === "project") {
+      const groups = groupBy(filtered, (i) => i.projectId ?? "__none");
+      return Object.keys(groups).map((key) => ({
+        key,
+        label: key === "__none" ? "No Project" : (projectMap.get(key)?.name ?? key.slice(0, 8)),
+        items: groups[key]!,
+      }));
+    }
     // assignee
     const groups = groupBy(
       filtered,
@@ -308,7 +316,7 @@ export function IssuesList({
             : (agentName(key) ?? key.slice(0, 8)),
       items: groups[key]!,
     }));
-  }, [filtered, viewState.groupBy, agents, agentName, currentUserId]);
+  }, [filtered, viewState.groupBy, agents, agentName, currentUserId, projectMap]);
 
   const newIssueDefaults = (groupKey?: string) => {
     const defaults: Record<string, string> = {};
@@ -316,6 +324,9 @@ export function IssuesList({
     if (groupKey) {
       if (viewState.groupBy === "status") defaults.status = groupKey;
       else if (viewState.groupBy === "priority") defaults.priority = groupKey;
+      else if (viewState.groupBy === "project" && groupKey !== "__none") {
+        defaults.projectId = groupKey;
+      }
       else if (viewState.groupBy === "assignee" && groupKey !== "__unassigned") {
         if (groupKey.startsWith("__user:")) defaults.assigneeUserId = groupKey.slice("__user:".length);
         else defaults.assigneeAgentId = groupKey;
@@ -627,6 +638,7 @@ export function IssuesList({
                     ["status", "Status"],
                     ["priority", "Priority"],
                     ["assignee", "Assignee"],
+                    ["project", "Project"],
                     ["none", "None"],
                   ] as const).map(([value, label]) => (
                     <button
@@ -716,6 +728,11 @@ export function IssuesList({
               <div className="flex items-center py-1.5 pl-1 pr-3">
                 <CollapsibleTrigger className="flex items-center gap-1.5">
                   <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform [[data-state=open]>&]:rotate-90" />
+                  {viewState.groupBy === "project" && group.key !== "__none" && (() => {
+                    const proj = projectMap.get(group.key);
+                    const c = proj?.color ?? "#6366f1";
+                    return <span className="h-2 w-2 rounded-sm shrink-0" style={{ background: c }} />;
+                  })()}
                   <span className="text-sm font-semibold uppercase tracking-wide">
                     {group.label}
                   </span>
