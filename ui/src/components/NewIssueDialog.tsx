@@ -305,6 +305,9 @@ export function NewIssueDialog() {
   const effectiveCompanyId = dialogCompanyId ?? selectedCompanyId;
   const dialogCompany = companies.find((c) => c.id === effectiveCompanyId) ?? selectedCompany;
 
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
+  const [labelsOpen, setLabelsOpen] = useState(false);
+
   // Popover states
   const [statusOpen, setStatusOpen] = useState(false);
   const [priorityOpen, setPriorityOpen] = useState(false);
@@ -344,6 +347,12 @@ export function NewIssueDialog() {
     queryKey: queryKeys.auth.session,
     queryFn: () => authApi.getSession(),
   });
+  const { data: labels } = useQuery({
+    queryKey: queryKeys.issues.labels(effectiveCompanyId!),
+    queryFn: () => issuesApi.listLabels(effectiveCompanyId!),
+    enabled: !!effectiveCompanyId && newIssueOpen,
+  });
+
   const { data: experimentalSettings } = useQuery({
     queryKey: queryKeys.instance.experimentalSettings,
     queryFn: () => instanceSettingsApi.getExperimental(),
@@ -617,6 +626,8 @@ export function NewIssueDialog() {
     setStagedFiles([]);
     setIsFileDragOver(false);
     setCompanyOpen(false);
+    setSelectedLabelIds([]);
+    setLabelsOpen(false);
     executionWorkspaceDefaultProjectId.current = null;
   }
 
@@ -681,6 +692,7 @@ export function NewIssueDialog() {
         ? { executionWorkspaceId: selectedExecutionWorkspaceId }
         : {}),
       ...(executionWorkspaceSettings ? { executionWorkspaceSettings } : {}),
+      ...(selectedLabelIds.length > 0 ? { labelIds: selectedLabelIds } : {}),
     });
   }
 
@@ -1398,11 +1410,62 @@ export function NewIssueDialog() {
             </PopoverContent>
           </Popover>
 
-          {/* Labels chip (placeholder) */}
-          <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs hover:bg-accent/50 transition-colors text-muted-foreground">
-            <Tag className="h-3 w-3" />
-            Labels
-          </button>
+          {/* Labels */}
+          <Popover open={labelsOpen} onOpenChange={setLabelsOpen}>
+            <PopoverTrigger asChild>
+              <button className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 text-xs hover:bg-accent/50 transition-colors text-muted-foreground">
+                <Tag className="h-3 w-3" />
+                {selectedLabelIds.length > 0 ? (
+                  <span className="flex items-center gap-1">
+                    {selectedLabelIds.slice(0, 2).map((id) => {
+                      const lbl = (labels ?? []).find((l) => l.id === id);
+                      return lbl ? (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1"
+                        >
+                          <span className="h-2 w-2 rounded-full" style={{ background: lbl.color ?? "#6366F1" }} />
+                          {lbl.name}
+                        </span>
+                      ) : null;
+                    })}
+                    {selectedLabelIds.length > 2 && (
+                      <span>+{selectedLabelIds.length - 2}</span>
+                    )}
+                  </span>
+                ) : (
+                  "Labels"
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-48 p-1" align="start">
+              {(labels ?? []).length === 0 ? (
+                <p className="px-2 py-1.5 text-xs text-muted-foreground">No labels</p>
+              ) : (
+                (labels ?? []).map((lbl) => {
+                  const checked = selectedLabelIds.includes(lbl.id);
+                  return (
+                    <button
+                      key={lbl.id}
+                      className={cn(
+                        "flex items-center gap-2 w-full px-2 py-1.5 text-xs rounded hover:bg-accent/50",
+                        checked && "bg-accent"
+                      )}
+                      onClick={() =>
+                        setSelectedLabelIds((prev) =>
+                          checked ? prev.filter((id) => id !== lbl.id) : [...prev, lbl.id]
+                        )
+                      }
+                    >
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: lbl.color ?? "#6366F1" }} />
+                      <span className="truncate">{lbl.name}</span>
+                      {checked && <span className="ml-auto text-[10px]">✓</span>}
+                    </button>
+                  );
+                })
+              )}
+            </PopoverContent>
+          </Popover>
 
           <input
             ref={stageFileInputRef}
