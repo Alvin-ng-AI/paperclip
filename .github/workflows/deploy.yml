@@ -52,6 +52,7 @@ jobs:
             export CI=true
             pnpm install --frozen-lockfile
             pnpm build
+            pnpm db:migrate
             rm -rf /usr/lib/node_modules/paperclipai/node_modules/@paperclipai/server/ui-dist
             ln -s /home/claudeuser/clawd/paperclip/ui/dist /usr/lib/node_modules/paperclipai/node_modules/@paperclipai/server/ui-dist
             # Deploy server dist — symlink fork's compiled server over global npm
