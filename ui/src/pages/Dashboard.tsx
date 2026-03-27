@@ -820,9 +820,16 @@ export function Dashboard() {
                         color: "#EF4444",
                       }}
                       disabled={anyPending || !cs.text.trim()}
+                      style={{
+                        background: cs.text.trim() ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.05)",
+                        border: "1px solid rgba(239,68,68,0.3)",
+                        color: cs.text.trim() ? "#EF4444" : "rgba(239,68,68,0.35)",
+                        opacity: cs.text.trim() ? 1 : 0.5,
+                        cursor: cs.text.trim() ? "pointer" : "not-allowed",
+                      }}
                       onClick={() => rejectMutation.mutate({ issueId: issue.id, reason: cs.text })}
                     >
-                      Send & Reject
+                      {cs.text.trim() ? "Send & Reject" : "Type a reason first"}
                     </button>
                     <button
                       className="px-3 text-xs rounded-lg"
