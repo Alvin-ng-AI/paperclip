@@ -7,6 +7,7 @@ import { agentsApi } from "../api/agents";
 import { projectsApi } from "../api/projects";
 import { shopifyApi } from "../api/shopify";
 import { goalsApi } from "../api/goals";
+import { taskGroupsApi } from "../api/taskGroups";
 import { useCompany } from "../context/CompanyContext";
 import { useDialog } from "../context/DialogContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
@@ -14,9 +15,10 @@ import { useToast } from "../context/ToastContext";
 import { queryKeys } from "../lib/queryKeys";
 import { EmptyState } from "../components/EmptyState";
 import { PageSkeleton } from "../components/PageSkeleton";
+import { TaskGroupCard } from "../components/TaskGroupCard";
 import { timeAgo } from "../lib/timeAgo";
-import { LayoutDashboard, Bell, Plus, ChevronRight, Check, X, MessageSquare, Ban } from "lucide-react";
-import type { Agent, Issue, Project, Goal } from "@paperclipai/shared";
+import { LayoutDashboard, Bell, Plus, ChevronRight, Check, X, MessageSquare, Ban, Zap } from "lucide-react";
+import type { Agent, Issue, Project, Goal, TaskGroup } from "@paperclipai/shared";
 import { AGENT_ROLE_LABELS } from "@paperclipai/shared";
 import { agentUrl, projectUrl, issueUrl } from "../lib/utils";
 
@@ -202,6 +204,20 @@ export function Dashboard() {
     staleTime: 3 * 60_000,
     retry: false, // Don't retry if bridge is down
   });
+
+  // Task groups — only fetch when feature flag is enabled (API returns 501 otherwise)
+  const { data: taskGroupsData } = useQuery<TaskGroup[]>({
+    queryKey: ["task-groups", "list", selectedCompanyId],
+    queryFn: () => taskGroupsApi.list(selectedCompanyId!, 10),
+    enabled: !!selectedCompanyId,
+    refetchInterval: 10_000,
+    retry: false, // Don't surface errors when parallel execution is disabled
+  });
+
+  const activeTaskGroups = useMemo(
+    () => (taskGroupsData ?? []).filter((g) => g.status === "pending" || g.status === "running"),
+    [taskGroupsData],
+  );
 
   const agentMap = useMemo(() => {
     const m = new Map<string, Agent>();
@@ -1340,6 +1356,26 @@ export function Dashboard() {
                 </Link>
               );
             })}
+          </div>
+        </>
+      )}
+
+      {/* ── Parallel Task Groups ──────────────────────────────────── */}
+      {activeTaskGroups.length > 0 && (
+        <>
+          <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+            <Zap className="h-3.5 w-3.5 text-yellow-500" />
+            <span
+              className="text-xs font-bold uppercase tracking-widest"
+              style={{ color: "#4B5563" }}
+            >
+              Parallel Tasks
+            </span>
+          </div>
+          <div className="px-4 flex flex-col gap-2 pb-2">
+            {activeTaskGroups.map((group) => (
+              <TaskGroupCard key={group.id} group={group} />
+            ))}
           </div>
         </>
       )}

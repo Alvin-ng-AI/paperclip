@@ -5,6 +5,7 @@ import { validate } from "../middleware/validate.js";
 import { assertCompanyAccess, getActorInfo } from "./authz.js";
 import { taskOrchestratorService } from "../services/task-orchestrator.js";
 import { forbidden } from "../errors.js";
+import { loadConfig } from "../config.js";
 
 const createTaskGroupTaskSchema = z.object({
   title: z.string().min(1),
@@ -28,9 +29,19 @@ export function taskGroupRoutes(db: Db) {
   const router = Router();
   const orchestrator = taskOrchestratorService(db);
 
+  // Feature flag guard: parallel execution must be enabled for write operations
+  const requireParallelEnabled = (req: import("express").Request, res: import("express").Response, next: import("express").NextFunction) => {
+    if (!loadConfig().enableParallelExecution) {
+      res.status(501).json({ error: "Parallel execution is not enabled. Set ENABLE_PARALLEL_EXECUTION=true." });
+      return;
+    }
+    next();
+  };
+
   // POST /api/companies/:companyId/task-groups
   router.post(
     "/api/companies/:companyId/task-groups",
+    requireParallelEnabled,
     validate(createTaskGroupSchema),
     async (req, res, next) => {
       try {
