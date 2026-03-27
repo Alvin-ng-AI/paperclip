@@ -814,11 +814,6 @@ export function Dashboard() {
                   <div className="flex gap-2 mt-1.5">
                     <button
                       className="flex-1 text-xs font-semibold py-1.5 rounded-lg"
-                      style={{
-                        background: "rgba(239,68,68,0.15)",
-                        border: "1px solid rgba(239,68,68,0.3)",
-                        color: "#EF4444",
-                      }}
                       disabled={anyPending || !cs.text.trim()}
                       style={{
                         background: cs.text.trim() ? "rgba(239,68,68,0.15)" : "rgba(239,68,68,0.05)",
