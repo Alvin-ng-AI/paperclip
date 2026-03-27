@@ -36,6 +36,7 @@ import { assertCompanyAccess, getActorInfo } from "./authz.js";
 import { shouldWakeAssigneeOnCheckout } from "./issues-checkout-wakeup.js";
 import { isAllowedContentType, MAX_ATTACHMENT_BYTES } from "../attachment-types.js";
 import { queueIssueAssignmentWakeup } from "../services/issue-assignment-wakeup.js";
+import { taskOrchestratorService } from "../services/task-orchestrator.js";
 
 const MAX_ISSUE_COMMENT_LIMIT = 500;
 
@@ -52,6 +53,7 @@ export function issueRoutes(db: Db, storage: StorageService) {
   const workProductsSvc = workProductService(db);
   const documentsSvc = documentService(db);
   const routinesSvc = routineService(db);
+  const orchestrator = taskOrchestratorService(db);
   const upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: MAX_ATTACHMENT_BYTES, files: 1 },
@@ -864,6 +866,20 @@ export function issueRoutes(db: Db, storage: StorageService) {
       return;
     }
     await routinesSvc.syncRunStatusForIssue(issue.id);
+
+    // Parallel task group fan-out: if this issue belongs to a task group and
+    // just reached a terminal status, notify the orchestrator.
+    const terminalStatuses = new Set(["done", "cancelled", "failed"]);
+    if (
+      issue.taskGroupId &&
+      updateFields.status &&
+      terminalStatuses.has(updateFields.status) &&
+      !terminalStatuses.has(existing.status)
+    ) {
+      orchestrator.onTaskComplete(issue.id, issue.parallelOutput as Record<string, unknown> | undefined).catch(
+        (err) => logger.warn({ err, issueId: issue.id }, "task-orchestrator onTaskComplete failed"),
+      );
+    }
 
     if (actor.runId) {
       await heartbeat.reportRunActivity(actor.runId).catch((err) =>

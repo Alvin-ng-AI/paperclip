@@ -52,6 +52,8 @@ export const createIssueSchema = z.object({
   ]).optional().nullable(),
   executionWorkspaceSettings: issueExecutionWorkspaceSettingsSchema.optional().nullable(),
   labelIds: z.array(z.string().uuid()).optional(),
+  taskGroupId: z.string().uuid().optional().nullable(),
+  dependsOn: z.array(z.string().uuid()).optional(),
 });
 
 export type CreateIssue = z.infer<typeof createIssueSchema>;
@@ -67,6 +69,7 @@ export const updateIssueSchema = createIssueSchema.partial().extend({
   comment: z.string().min(1).optional(),
   reopen: z.boolean().optional(),
   hiddenAt: z.string().datetime().nullable().optional(),
+  parallelOutput: z.record(z.unknown()).optional().nullable(),
 });
 
 export type UpdateIssue = z.infer<typeof updateIssueSchema>;

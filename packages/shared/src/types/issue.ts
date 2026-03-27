@@ -131,6 +131,9 @@ export interface Issue {
   hiddenAt: Date | null;
   labelIds?: string[];
   labels?: IssueLabel[];
+  taskGroupId?: string | null;
+  dependsOn?: string[];
+  parallelOutput?: Record<string, unknown> | null;
   planDocument?: IssueDocument | null;
   documentSummaries?: IssueDocumentSummary[];
   legacyPlanDocument?: LegacyPlanDocument | null;

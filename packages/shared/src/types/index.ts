@@ -1,4 +1,11 @@
 export type { Company } from "./company.js";
+export type {
+  TaskGroupStatus,
+  TaskGroup,
+  TaskGroupMember,
+  CreateTaskGroupInput,
+  CreateTaskGroupTaskInput,
+} from "./task-group.js";
 export type { InstanceExperimentalSettings, InstanceGeneralSettings, InstanceSettings } from "./instance.js";
 export type {
   CompanySkillSourceType,

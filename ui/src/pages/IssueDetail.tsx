@@ -22,6 +22,7 @@ import { InlineEditor } from "../components/InlineEditor";
 import { CommentThread } from "../components/CommentThread";
 import { IssueDocumentsSection } from "../components/IssueDocumentsSection";
 import { IssueProperties } from "../components/IssueProperties";
+import { TaskGroupCardById } from "../components/TaskGroupCard";
 import { LiveRunWidget } from "../components/LiveRunWidget";
 import type { MentionOption } from "../components/MarkdownEditor";
 import { ScrollToBottom } from "../components/ScrollToBottom";
@@ -1115,6 +1116,13 @@ export function IssueDetail() {
         itemClassName="rounded-lg border border-border p-3"
         missingBehavior="placeholder"
       />
+
+      {issue.taskGroupId && (
+        <TaskGroupCardById
+          groupId={issue.taskGroupId}
+          companyPrefix={issue.identifier?.split("-")[0]}
+        />
+      )}
 
       <IssueDocumentsSection
         issue={issue}
