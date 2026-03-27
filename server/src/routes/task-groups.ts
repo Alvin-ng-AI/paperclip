@@ -34,7 +34,8 @@ export function taskGroupRoutes(db: Db) {
     validate(createTaskGroupSchema),
     async (req, res, next) => {
       try {
-        assertCompanyAccess(req, req.params.companyId!);
+        const companyId = req.params.companyId as string;
+        assertCompanyAccess(req, companyId);
         const actor = getActorInfo(req);
 
         // Only agents can create task groups
@@ -43,7 +44,7 @@ export function taskGroupRoutes(db: Db) {
         }
 
         const group = await orchestrator.createTaskGroup(
-          req.params.companyId!,
+          companyId,
           actor.agentId,
           req.body,
         );
@@ -57,9 +58,10 @@ export function taskGroupRoutes(db: Db) {
   // GET /api/companies/:companyId/task-groups
   router.get("/api/companies/:companyId/task-groups", async (req, res, next) => {
     try {
-      assertCompanyAccess(req, req.params.companyId!);
+      const companyId = req.params.companyId as string;
+      assertCompanyAccess(req, companyId);
       const limit = Math.min(Number(req.query.limit) || 20, 100);
-      const groups = await orchestrator.listTaskGroups(req.params.companyId!, limit);
+      const groups = await orchestrator.listTaskGroups(companyId, limit);
       res.json(groups);
     } catch (err) {
       next(err);
