@@ -12,6 +12,7 @@ import {
   Repeat,
   Settings,
   ShieldCheck,
+  BookOpen,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { SidebarSection } from "./SidebarSection";
@@ -157,6 +158,7 @@ export function Sidebar() {
         <SidebarSection label="Company">
           <SidebarNavItem to="/search" label="Search" icon={Search} />
           <SidebarNavItem to="/org" label="Org" icon={Network} />
+          <SidebarNavItem to="/kb" label="Knowledge Base" icon={BookOpen} />
           <SidebarNavItem to="/skills" label="Skills" icon={Boxes} />
           <SidebarNavItem to="/costs" label="Costs" icon={DollarSign} />
           <SidebarNavItem to="/activity" label="Activity" icon={History} />

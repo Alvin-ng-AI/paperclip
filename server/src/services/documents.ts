@@ -1,6 +1,6 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import type { Db } from "@paperclipai/db";
-import { documentRevisions, documents, issueDocuments, issues } from "@paperclipai/db";
+import { documentRevisions, documents, issueDocuments, issues, projects } from "@paperclipai/db";
 import { issueDocumentKeySchema } from "@paperclipai/shared";
 import { conflict, notFound, unprocessable } from "../errors.js";
 
@@ -389,6 +389,37 @@ export function documentService(db: Db) {
         }
         throw error;
       }
+    },
+
+    listCompanyDocuments: async (companyId: string) => {
+      const rows = await db
+        .select({
+          id: documents.id,
+          companyId: documents.companyId,
+          issueId: issueDocuments.issueId,
+          issueTitle: issues.title,
+          issueIdentifier: issues.identifier,
+          projectId: issues.projectId,
+          projectName: projects.name,
+          key: issueDocuments.key,
+          title: documents.title,
+          format: documents.format,
+          latestRevisionId: documents.latestRevisionId,
+          latestRevisionNumber: documents.latestRevisionNumber,
+          createdByAgentId: documents.createdByAgentId,
+          createdByUserId: documents.createdByUserId,
+          updatedByAgentId: documents.updatedByAgentId,
+          updatedByUserId: documents.updatedByUserId,
+          createdAt: documents.createdAt,
+          updatedAt: documents.updatedAt,
+        })
+        .from(documents)
+        .innerJoin(issueDocuments, eq(issueDocuments.documentId, documents.id))
+        .innerJoin(issues, eq(issueDocuments.issueId, issues.id))
+        .leftJoin(projects, eq(issues.projectId, projects.id))
+        .where(eq(documents.companyId, companyId))
+        .orderBy(desc(documents.updatedAt));
+      return rows;
     },
 
     deleteIssueDocument: async (issueId: string, rawKey: string) => {
