@@ -1,315 +1,396 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Search, Puzzle, ChevronDown } from "lucide-react";
+import { Link } from "@/lib/router";
+import type { CompanySkillListItem } from "@paperclipai/shared";
+import type { AgentSkillSnapshot } from "@paperclipai/shared";
+import { companySkillsApi } from "../api/companySkills";
+import { agentsApi } from "../api/agents";
 import { useCompany } from "../context/CompanyContext";
 import { useBreadcrumbs } from "../context/BreadcrumbContext";
-import { useToast } from "../context/ToastContext";
-import { agentsApi } from "../api/agents";
 import { queryKeys } from "../lib/queryKeys";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { cn } from "../lib/utils";
-import { useEffect } from "react";
+import { PageSkeleton } from "../components/PageSkeleton";
+import { EmptyState } from "../components/EmptyState";
+import {
+  Boxes,
+  Search,
+  Github,
+  Link2,
+  Paperclip,
+  HardDrive,
+  ExternalLink,
+  CheckCircle2,
+  Circle,
+  Users,
+  ChevronDown,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-// Hardcoded openclaw skills catalog
-const OPENCLAW_SKILLS = [
-  {
-    id: "ads",
-    name: "ads",
-    emoji: "📊",
-    displayName: "Ads",
-    description: "Paid advertising audit & optimization for Google, Meta, LinkedIn, TikTok, and more.",
-    category: "Data",
-  },
-  {
-    id: "weather",
-    name: "weather",
-    emoji: "🌤️",
-    displayName: "Weather",
-    description: "Get current weather conditions and forecasts for any location.",
-    category: "Research",
-  },
-  {
-    id: "gemini",
-    name: "gemini",
-    emoji: "✨",
-    displayName: "Gemini",
-    description: "Gemini CLI for one-shot Q&A, summaries, and AI generation tasks.",
-    category: "Creative",
-  },
-  {
-    id: "healthcheck",
-    name: "healthcheck",
-    emoji: "🔒",
-    displayName: "Healthcheck",
-    description: "Host security hardening and risk-tolerance configuration for OpenClaw deployments.",
-    category: "Productivity",
-  },
-  {
-    id: "tmux",
-    name: "tmux",
-    emoji: "💻",
-    displayName: "Tmux",
-    description: "Remote-control tmux sessions for interactive CLIs by sending keystrokes and scraping pane output.",
-    category: "Productivity",
-  },
-  {
-    id: "ui-ux-pro-max",
-    name: "ui-ux-pro-max",
-    emoji: "🎨",
-    displayName: "UI/UX Pro Max",
-    description: "AI-powered design intelligence for UI styles, color palettes, font pairings, and UX guidelines.",
-    category: "Creative",
-  },
-  {
-    id: "skill-creator",
-    name: "skill-creator",
-    emoji: "🛠️",
-    displayName: "Skill Creator",
-    description: "Create, edit, improve, or audit AgentSkills. Author new skills from scratch.",
-    category: "Productivity",
-  },
-  {
-    id: "coding-agent",
-    name: "coding-agent",
-    emoji: "🤖",
-    displayName: "Coding Agent",
-    description: "Delegate coding tasks to Codex, Claude Code, or Pi agents via background process.",
-    category: "Productivity",
-  },
-  {
-    id: "github",
-    name: "github",
-    emoji: "🐙",
-    displayName: "GitHub",
-    description: "GitHub operations via gh CLI: issues, PRs, CI runs, code review, and API queries.",
-    category: "Productivity",
-  },
-  {
-    id: "gh-issues",
-    name: "gh-issues",
-    emoji: "🔢",
-    displayName: "GH Issues",
-    description: "Fetch GitHub issues, spawn sub-agents to implement fixes and open PRs, then monitor review comments.",
-    category: "Productivity",
-  },
-  {
-    id: "gog",
-    name: "gog",
-    emoji: "📧",
-    displayName: "Google Workspace",
-    description: "Google Workspace CLI for Gmail, Calendar, Drive, Contacts, Sheets, and Docs.",
-    category: "Communication",
-  },
-  {
-    id: "video-frames",
-    name: "video-frames",
-    emoji: "🎬",
-    displayName: "Video Frames",
-    description: "Extract frames or short clips from videos using ffmpeg.",
-    category: "Creative",
-  },
-];
+const CATEGORIES = ["All", "Research", "Creative", "Data", "Communication"] as const;
+type Category = (typeof CATEGORIES)[number];
 
-const CATEGORIES = ["All", "Research", "Creative", "Data", "Communication", "Productivity"];
+function getSkillCategory(skill: CompanySkillListItem): string {
+  const meta = skill.metadata as Record<string, unknown> | null;
+  return (meta?.category as string) || "Uncategorized";
+}
+
+function SourceBadge({ badge }: { badge: CompanySkillListItem["sourceBadge"] }) {
+  if (badge === "github")
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+        <Github className="h-2.5 w-2.5" /> GitHub
+      </span>
+    );
+  if (badge === "paperclip")
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">
+        <Paperclip className="h-2.5 w-2.5" /> Paperclip
+      </span>
+    );
+  if (badge === "local")
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+        <HardDrive className="h-2.5 w-2.5" /> Local
+      </span>
+    );
+  if (badge === "url")
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+        <Link2 className="h-2.5 w-2.5" /> URL
+      </span>
+    );
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+      <Boxes className="h-2.5 w-2.5" /> {badge}
+    </span>
+  );
+}
+
+function CategoryBadge({ category }: { category: string }) {
+  const colors: Record<string, string> = {
+    Research: "bg-purple-500/10 text-purple-400",
+    Creative: "bg-pink-500/10 text-pink-400",
+    Data: "bg-cyan-500/10 text-cyan-400",
+    Communication: "bg-green-500/10 text-green-400",
+  };
+  const cls = colors[category] ?? "bg-muted text-muted-foreground";
+  return (
+    <span className={cn("inline-flex text-[10px] px-1.5 py-0.5 rounded font-medium", cls)}>
+      {category}
+    </span>
+  );
+}
+
+function AgentSelector({
+  agents,
+  selectedAgentId,
+  onSelect,
+}: {
+  agents: { id: string; name: string; urlKey: string }[];
+  selectedAgentId: string | null;
+  onSelect: (id: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = agents.find((a) => a.id === selectedAgentId);
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-card text-sm hover:bg-accent/50 transition-colors min-w-[200px] justify-between"
+      >
+        <span className="truncate text-foreground">
+          {selected ? selected.name : "Select an agent"}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 w-full min-w-[220px] rounded-lg border border-border bg-popover shadow-lg z-50 overflow-hidden">
+          <button
+            className="w-full text-left px-3 py-2 text-sm text-muted-foreground hover:bg-accent/50 transition-colors"
+            onClick={() => { onSelect(null); setOpen(false); }}
+          >
+            None selected
+          </button>
+          {agents.map((a) => (
+            <button
+              key={a.id}
+              className={cn(
+                "w-full text-left px-3 py-2 text-sm hover:bg-accent/50 transition-colors",
+                a.id === selectedAgentId && "bg-accent text-foreground",
+              )}
+              onClick={() => { onSelect(a.id); setOpen(false); }}
+            >
+              {a.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SkillCard({
   skill,
-  agents,
-  companyId,
+  isEquipped,
+  canToggle,
+  onToggle,
+  toggling,
 }: {
-  skill: typeof OPENCLAW_SKILLS[0];
-  agents: { id: string; name: string; urlKey: string }[];
-  companyId: string | undefined;
+  skill: CompanySkillListItem;
+  isEquipped: boolean;
+  canToggle: boolean;
+  onToggle: () => void;
+  toggling: boolean;
 }) {
-  const [agentPickerOpen, setAgentPickerOpen] = useState(false);
-  const queryClient = useQueryClient();
-  const { pushToast } = useToast();
-
-  const addToAgent = useMutation({
-    mutationFn: async (agentId: string) => {
-      const agent = agents.find((a) => a.id === agentId);
-      if (!agent) throw new Error("Agent not found");
-      const snapshot = await agentsApi.skills(agentId, companyId);
-      const existingKeys = snapshot.desiredSkills ?? [];
-      if (existingKeys.includes(skill.name)) return snapshot;
-      const next = [...existingKeys, skill.name];
-      return agentsApi.syncSkills(agentId, next, companyId);
-    },
-    onSuccess: (_, agentId) => {
-      const agent = agents.find((a) => a.id === agentId);
-      pushToast({
-        tone: "success",
-        title: "Skill added",
-        body: `${skill.displayName} added to ${agent?.name ?? "agent"}.`,
-      });
-      queryClient.invalidateQueries({ queryKey: queryKeys.agents.skills(agentId) });
-      setAgentPickerOpen(false);
-    },
-    onError: (error) => {
-      pushToast({
-        tone: "error",
-        title: "Failed to add skill",
-        body: error instanceof Error ? error.message : "Unknown error",
-      });
-    },
-  });
+  const category = getSkillCategory(skill);
 
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4 shadow-sm hover:shadow-md transition-shadow">
-      <div className="flex items-start gap-3">
-        <span className="text-2xl leading-none">{skill.emoji}</span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-sm text-foreground">{skill.displayName}</h3>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-              {skill.category}
-            </Badge>
+    <div
+      className={cn(
+        "rounded-xl border bg-card p-4 flex flex-col gap-3 transition-colors",
+        isEquipped ? "border-primary/30 bg-primary/5" : "border-border",
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+            <SourceBadge badge={skill.sourceBadge} />
+            {category !== "Uncategorized" && <CategoryBadge category={category} />}
           </div>
-          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{skill.description}</p>
+          <h3 className="text-sm font-semibold text-foreground truncate">{skill.name}</h3>
         </div>
+        <button
+          onClick={onToggle}
+          disabled={!canToggle || toggling}
+          title={
+            !canToggle
+              ? "Select an agent to equip this skill"
+              : isEquipped
+              ? "Unequip from agent"
+              : "Equip for agent"
+          }
+          className={cn(
+            "shrink-0 transition-colors",
+            canToggle ? "cursor-pointer" : "cursor-default opacity-40",
+            toggling && "opacity-50",
+          )}
+        >
+          {isEquipped ? (
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+          ) : (
+            <Circle className="h-5 w-5 text-muted-foreground hover:text-foreground" />
+          )}
+        </button>
       </div>
-      <div className="mt-auto pt-1">
-        {agents.length === 0 ? (
-          <Button size="sm" variant="outline" className="w-full text-xs" disabled>
-            No agents available
-          </Button>
-        ) : (
-          <Popover open={agentPickerOpen} onOpenChange={setAgentPickerOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full text-xs gap-1"
-                disabled={addToAgent.isPending}
-              >
-                {addToAgent.isPending ? "Adding..." : "Add to Agent"}
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-52 p-1" align="start">
-              <div className="text-[11px] font-medium text-muted-foreground px-2 py-1 uppercase tracking-wide">
-                Select agent
-              </div>
-              {agents.map((agent) => (
-                <button
-                  key={agent.id}
-                  className="w-full text-left px-2 py-1.5 text-sm rounded hover:bg-accent/50 transition-colors"
-                  onClick={() => addToAgent.mutate(agent.id)}
-                  disabled={addToAgent.isPending}
-                >
-                  {agent.name}
-                </button>
-              ))}
-            </PopoverContent>
-          </Popover>
-        )}
+
+      {skill.description && (
+        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+          {skill.description}
+        </p>
+      )}
+
+      <div className="flex items-center justify-between mt-auto pt-1">
+        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+          <Users className="h-3 w-3" />
+          {skill.attachedAgentCount} agent{skill.attachedAgentCount !== 1 ? "s" : ""} equipped
+        </span>
+        <Link
+          to={`/skills`}
+          className="flex items-center gap-0.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Details <ExternalLink className="h-2.5 w-2.5 ml-0.5" />
+        </Link>
       </div>
     </div>
   );
 }
 
 export function SkillsMarketplace() {
-  const { selectedCompanyId } = useCompany();
-  const { setBreadcrumbs } = useBreadcrumbs();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const { selectedCompany } = useCompany();
+  const companyId = selectedCompany?.id ?? "";
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    setBreadcrumbs([{ label: "Skills Marketplace" }]);
-  }, [setBreadcrumbs]);
+  useBreadcrumbs([{ label: "Marketplace" }]);
 
-  const agentsQuery = useQuery({
-    queryKey: queryKeys.agents.list(selectedCompanyId ?? ""),
-    queryFn: () => agentsApi.list(selectedCompanyId!),
-    enabled: Boolean(selectedCompanyId),
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState<Category>("All");
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+
+  const { data: skills, isLoading: skillsLoading } = useQuery({
+    queryKey: queryKeys.companySkills.list(companyId),
+    queryFn: () => companySkillsApi.list(companyId),
+    enabled: Boolean(companyId),
   });
 
+  const { data: agents } = useQuery({
+    queryKey: queryKeys.agents.list(companyId),
+    queryFn: () => agentsApi.list(companyId),
+    enabled: Boolean(companyId),
+  });
+
+  const { data: agentSkillSnapshot } = useQuery({
+    queryKey: queryKeys.agents.skills(selectedAgentId ?? ""),
+    queryFn: () => agentsApi.skills(selectedAgentId!, companyId),
+    enabled: Boolean(selectedAgentId && companyId),
+  });
+
+  const syncSkillsMutation = useMutation({
+    mutationFn: (desiredSkills: string[]) =>
+      agentsApi.syncSkills(selectedAgentId!, desiredSkills, companyId),
+    onSuccess: (snapshot: AgentSkillSnapshot) => {
+      queryClient.setQueryData(queryKeys.agents.skills(selectedAgentId!), snapshot);
+      queryClient.invalidateQueries({ queryKey: queryKeys.companySkills.list(companyId) });
+    },
+  });
+
+  const equippedKeys = useMemo(
+    () => new Set(agentSkillSnapshot?.desiredSkills ?? []),
+    [agentSkillSnapshot],
+  );
+
   const filteredSkills = useMemo(() => {
-    return OPENCLAW_SKILLS.filter((skill) => {
+    if (!skills) return [];
+    return skills.filter((s) => {
       const matchesSearch =
-        searchQuery.trim().length === 0 ||
-        skill.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        skill.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        skill.category.toLowerCase().includes(searchQuery.toLowerCase());
+        !search ||
+        s.name.toLowerCase().includes(search.toLowerCase()) ||
+        (s.description ?? "").toLowerCase().includes(search.toLowerCase());
+      const skillCategory = getSkillCategory(s);
       const matchesCategory =
-        selectedCategory === "All" || skill.category === selectedCategory;
+        category === "All" ||
+        skillCategory.toLowerCase() === category.toLowerCase();
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [skills, search, category]);
 
-  const agents = agentsQuery.data ?? [];
+  const activeAgents = useMemo(
+    () => (agents ?? []).filter((a) => a.status === "active" || a.status === "paused"),
+    [agents],
+  );
+
+  function handleToggle(skill: CompanySkillListItem) {
+    if (!selectedAgentId || !agentSkillSnapshot) return;
+    const current = [...(agentSkillSnapshot.desiredSkills ?? [])];
+    const isEquipped = equippedKeys.has(skill.key);
+    const next = isEquipped
+      ? current.filter((k) => k !== skill.key)
+      : [...current, skill.key];
+    syncSkillsMutation.mutate(next);
+  }
+
+  if (skillsLoading) return <PageSkeleton />;
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-start gap-3">
-        <Puzzle className="h-7 w-7 text-muted-foreground mt-0.5 shrink-0" />
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
         <div>
-          <h1 className="text-2xl font-semibold">Skills Marketplace</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Browse and install OpenClaw skills for your agents.
+          <h1 className="text-lg font-semibold">Skills Marketplace</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Browse and equip skills for your agents
           </p>
         </div>
-      </div>
-
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search skills..."
-          className="pl-9"
-        />
-      </div>
-
-      {/* Category Filters */}
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map((category) => (
-          <button
-            key={category}
-            onClick={() => setSelectedCategory(category)}
-            className={cn(
-              "px-3 py-1.5 rounded-full text-sm font-medium border transition-colors",
-              selectedCategory === category
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background text-foreground border-border hover:bg-accent/50",
-            )}
-          >
-            {category}
-          </button>
-        ))}
-      </div>
-
-      {/* Skills Grid */}
-      {filteredSkills.length === 0 ? (
-        <div className="text-center py-16 text-muted-foreground text-sm">
-          No skills match your search.
+        <div className="flex items-center gap-2">
+          <AgentSelector
+            agents={activeAgents}
+            selectedAgentId={selectedAgentId}
+            onSelect={setSelectedAgentId}
+          />
+          {selectedAgentId && (
+            <Link
+              to={`/agents/${selectedAgentId}/skills`}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors underline-offset-2 hover:underline"
+            >
+              Open agent skills
+            </Link>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredSkills.map((skill) => (
-            <SkillCard
-              key={skill.id}
-              skill={skill}
-              agents={agents}
-              companyId={selectedCompanyId ?? undefined}
-            />
+      </div>
+
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 px-6 py-3 border-b border-border shrink-0">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            placeholder="Search skills…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-8 h-8 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-1">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setCategory(cat)}
+              className={cn(
+                "px-3 py-1 text-xs font-medium rounded-full transition-colors",
+                category === cat
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+              )}
+            >
+              {cat}
+            </button>
           ))}
+        </div>
+      </div>
+
+      {/* Equip hint */}
+      {!selectedAgentId && (
+        <div className="mx-6 mt-3 px-3 py-2 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground">
+          Select an agent above to equip or unequip skills with one click.
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground pt-2">
-        Showing {filteredSkills.length} of {OPENCLAW_SKILLS.length} available skills.
-        Skills are sourced from <code>/usr/lib/node_modules/openclaw/skills/</code>.
-      </p>
+      {/* Grid */}
+      <div className="flex-1 overflow-y-auto px-6 py-4">
+        {filteredSkills.length === 0 ? (
+          <EmptyState
+            icon={Boxes}
+            title={search || category !== "All" ? "No skills match your filter" : "No skills yet"}
+            description={
+              search || category !== "All"
+                ? "Try adjusting your search or category filter."
+                : "Import or create skills from the Skills Library."
+            }
+            action={
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/skills">Go to Skills Library</Link>
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {filteredSkills.map((skill) => (
+              <SkillCard
+                key={skill.id}
+                skill={skill}
+                isEquipped={equippedKeys.has(skill.key)}
+                canToggle={Boolean(selectedAgentId && agentSkillSnapshot)}
+                onToggle={() => handleToggle(skill)}
+                toggling={syncSkillsMutation.isPending}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Footer stats */}
+      <div className="px-6 py-2 border-t border-border shrink-0 flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          {filteredSkills.length} skill{filteredSkills.length !== 1 ? "s" : ""}
+          {category !== "All" ? ` in ${category}` : ""}
+          {search ? ` matching "${search}"` : ""}
+        </span>
+        {selectedAgentId && agentSkillSnapshot && (
+          <span className="text-xs text-muted-foreground">
+            {equippedKeys.size} equipped for {activeAgents.find((a) => a.id === selectedAgentId)?.name}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
