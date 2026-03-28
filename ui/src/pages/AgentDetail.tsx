@@ -2564,12 +2564,20 @@ function AgentSkillsTab({
   return (
     <div className="max-w-4xl space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          to="/skills"
-          className="text-sm font-medium text-foreground underline-offset-4 no-underline transition-colors hover:text-foreground/70 hover:underline"
-        >
-          View company skills library
-        </Link>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/skills"
+            className="text-sm font-medium text-foreground underline-offset-4 no-underline transition-colors hover:text-foreground/70 hover:underline"
+          >
+            View company skills library
+          </Link>
+          <Link
+            to="/marketplace"
+            className="text-sm font-medium text-primary underline-offset-4 no-underline transition-colors hover:text-primary/70 hover:underline"
+          >
+            Browse Marketplace →
+          </Link>
+        </div>
         {saveStatusLabel ? (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {syncSkills.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
