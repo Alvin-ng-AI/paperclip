@@ -126,6 +126,7 @@ export const queryKeys = {
   documents: {
     listForCompany: (companyId: string) => ["documents", "company", companyId] as const,
   },
+  roadmap: (companyId: string) => ["roadmap", companyId] as const,
   skills: {
     available: ["skills", "available"] as const,
   },
