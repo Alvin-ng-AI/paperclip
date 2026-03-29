@@ -21,6 +21,7 @@ import { relativeTime, cn, formatTokens, visibleRunCostUsd, projectUrl } from ".
 import { InlineEditor } from "../components/InlineEditor";
 import { CommentThread } from "../components/CommentThread";
 import { IssueDocumentsSection } from "../components/IssueDocumentsSection";
+import { ImageGenerator } from "../components/ImageGenerator";
 import { IssueProperties } from "../components/IssueProperties";
 import { TaskGroupCardById } from "../components/TaskGroupCard";
 import { LiveRunWidget } from "../components/LiveRunWidget";
@@ -56,6 +57,7 @@ import {
   SlidersHorizontal,
   Target,
   Trash2,
+  Sparkles,
 } from "lucide-react";
 import type { ActivityEvent } from "@paperclipai/shared";
 import type { Agent, IssueAttachment } from "@paperclipai/shared";
@@ -1221,6 +1223,10 @@ export function IssueDetail() {
             <ActivityIcon className="h-3.5 w-3.5" />
             Activity
           </TabsTrigger>
+          <TabsTrigger value="ai-image" className="gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" />
+            AI Image
+          </TabsTrigger>
           {issuePluginTabItems.map((item) => (
             <TabsTrigger key={item.value} value={item.value}>
               {item.label}
@@ -1346,6 +1352,10 @@ export function IssueDetail() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="ai-image">
+          <ImageGenerator companyId={issue.companyId} />
         </TabsContent>
 
         {activePluginTab && (
